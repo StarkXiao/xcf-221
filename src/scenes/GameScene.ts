@@ -415,23 +415,57 @@ export class GameScene extends Scene {
 
       case 'door':
       case 'exit':
-        if (obj.type === 'door' && obj.requiredItem && !this.gameState.openedDoors.includes(obj.id)) {
-          if (selected && selected === obj.requiredItem) {
-            this.audio.playSfx('door');
-            this.gameState.openedDoors.push(obj.id);
-            this.inventory.removeItem(obj.requiredItem);
-            this.eventBus.emit('door_open', obj.id);
-            this.showFloatingText('门打开了！', 0x4ade80);
-            if (obj.targetScene) {
-              this.changeScene(obj.targetScene);
+        if (obj.type === 'door' && !this.gameState.openedDoors.includes(obj.id)) {
+          const requiresOneOf = obj.requiredItemOneOf && obj.requiredItemOneOf.length > 0;
+          const requiredItem = obj.requiredItem;
+
+          if (requiresOneOf) {
+            const matchedItem = obj.requiredItemOneOf!.find(item => selected === item);
+            const hasAny = obj.requiredItemOneOf!.some(item => this.inventory.hasItem(item));
+
+            if (matchedItem) {
+              this.audio.playSfx('mechanism');
+              this.time.delayedCall(200, () => this.audio.playSfx('door'));
+              this.gameState.openedDoors.push(obj.id);
+              this.inventory.removeItem(matchedItem);
+              this.eventBus.emit('door_open', obj.id);
+              this.showFloatingText('⚙️ 机关启动，通路打开！', 0x4ade80);
+              if (obj.targetScene) {
+                this.changeScene(obj.targetScene);
+              }
+              this.autoSave();
+            } else if (selected) {
+              this.audio.playSfx('error');
+              this.showMessage('这个道具不合适...', 2000);
+            } else if (hasAny) {
+              this.audio.playSfx('click');
+              const itemsList = obj.requiredItemOneOf!.map(id => {
+                const d = this.inventory.getItemData(id);
+                return d?.name ?? id;
+              }).join(' 或 ');
+              this.showClueModal(`${obj.clueText ?? ''}\n\n💡 从背包选择「${itemsList}」来使用`);
+            } else {
+              this.audio.playSfx('error');
+              if (obj.clueText) this.showClueModal(obj.clueText);
             }
-            this.autoSave();
-          } else if (selected) {
-            this.audio.playSfx('error');
-            this.showMessage('这把钥匙不对...', 2000);
-          } else {
-            this.audio.playSfx('error');
-            if (obj.clueText) this.showClueModal(obj.clueText);
+          } else if (requiredItem) {
+            if (selected && selected === requiredItem) {
+              this.audio.playSfx('door');
+              this.gameState.openedDoors.push(obj.id);
+              this.inventory.removeItem(requiredItem);
+              this.eventBus.emit('door_open', obj.id);
+              this.showFloatingText('门打开了！', 0x4ade80);
+              if (obj.targetScene) {
+                this.changeScene(obj.targetScene);
+              }
+              this.autoSave();
+            } else if (selected) {
+              this.audio.playSfx('error');
+              this.showMessage('这把钥匙不对...', 2000);
+            } else {
+              this.audio.playSfx('error');
+              if (obj.clueText) this.showClueModal(obj.clueText);
+            }
           }
         } else if (obj.type === 'exit' || this.gameState.openedDoors.includes(obj.id)) {
           this.audio.playSfx('door');
@@ -1292,11 +1326,22 @@ export class GameScene extends Scene {
           hints.push(`⚙️ 试试「${obj.name}」的阀门联动机关`);
         }
       }
-      if (obj.type === 'door' && obj.requiredItem && !this.gameState.openedDoors.includes(obj.id)) {
-        if (this.inventory.hasItem(obj.requiredItem)) {
-          hints.push(`🔑 用「${this.inventory.getItemData(obj.requiredItem)?.name}」打开「${obj.name}」`);
-        } else {
-          hints.push(`🚪「${obj.name}」需要特定钥匙，找找其他场景吧`);
+      if (obj.type === 'door' && !this.gameState.openedDoors.includes(obj.id)) {
+        if (obj.requiredItemOneOf && obj.requiredItemOneOf.length > 0) {
+          const hasAny = obj.requiredItemOneOf.some(id => this.inventory.hasItem(id));
+          if (hasAny) {
+            const availableId = obj.requiredItemOneOf.find(id => this.inventory.hasItem(id))!;
+            const itemName = this.inventory.getItemData(availableId)?.name ?? availableId;
+            hints.push(`🔑 用「${itemName}」打开「${obj.name}」`);
+          } else {
+            hints.push(`🚪「${obj.name}」需要齿轮或钥匙，继续探索吧`);
+          }
+        } else if (obj.requiredItem) {
+          if (this.inventory.hasItem(obj.requiredItem)) {
+            hints.push(`🔑 用「${this.inventory.getItemData(obj.requiredItem)?.name}」打开「${obj.name}」`);
+          } else {
+            hints.push(`🚪「${obj.name}」需要特定钥匙，找找其他场景吧`);
+          }
         }
       }
     });

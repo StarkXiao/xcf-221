@@ -501,10 +501,9 @@ export const SCENES: Record<string, SceneConfig> = {
         size: { x: 80, y: 120 },
         spriteKey: 'obj_hatch_door',
         interactive: true,
-        type: 'door',
-        requiredItem: 'mech_room_key',
+        type: 'exit',
         targetScene: 'mechanical_room',
-        clueText: '地板上一扇生锈的铁门，锁孔形状像齿轮...需要特殊的钥匙。'
+        clueText: '地板上一扇生锈的铁门，锁似乎已经坏了...用力一拉，门吱呀一声打开了，一股阴冷的空气扑面而来。'
       }
     ]
   },
@@ -571,9 +570,9 @@ export const SCENES: Record<string, SceneConfig> = {
         spriteKey: 'obj_gear_mechanism',
         interactive: true,
         type: 'door',
-        requiredItem: 'gear_restored',
+        requiredItemOneOf: ['gear_restored', 'mech_room_key'],
         targetScene: 'backstage',
-        clueText: '巨大的齿轮组缺少一枚关键齿轮，无法咬合运转...需要找到合适的齿轮嵌入其中。'
+        clueText: '巨大的齿轮组缺少一枚关键齿轮，无法咬合运转...或许可以找到合适的齿轮嵌入，或是用专用钥匙直接解锁。'
       },
       {
         id: 'mech_wall_note',

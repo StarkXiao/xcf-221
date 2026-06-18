@@ -56,6 +56,7 @@ export interface SceneObject {
   interactive: boolean;
   type: 'item' | 'door' | 'puzzle' | 'clue' | 'exit' | 'mech_puzzle';
   requiredItem?: string;
+  requiredItemOneOf?: string[];
   containsItem?: string;
   targetScene?: string;
   clueText?: string;
