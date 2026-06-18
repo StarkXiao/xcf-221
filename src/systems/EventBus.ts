@@ -12,6 +12,8 @@ export type GameEventType =
   | 'load_game'
   | 'show_message'
   | 'show_puzzle'
+  | 'show_mech_puzzle'
+  | 'mech_puzzle_solve'
   | 'show_ending'
   | 'toggle_settings'
   | 'archive_clue_discovered'

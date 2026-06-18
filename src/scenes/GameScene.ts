@@ -1,8 +1,9 @@
 import { Scene } from 'phaser';
 import type { GameState, SceneObject, DialogNode } from '@/types';
-import { GAME_WIDTH, GAME_HEIGHT, SCENES, LIGHT_PUZZLES, GHOST_ACTOR_TRIGGER_OBJECTS } from '@/config/levels';
+import { GAME_WIDTH, GAME_HEIGHT, SCENES, LIGHT_PUZZLES, MECH_PUZZLES, GHOST_ACTOR_TRIGGER_OBJECTS } from '@/config/levels';
 import { InventorySystem } from '@/systems/InventorySystem';
 import { LightPuzzleSystem } from '@/systems/LightPuzzleSystem';
+import { MechPuzzleSystem } from '@/systems/MechPuzzleSystem';
 import { AudioManager } from '@/systems/AudioManager';
 import { SaveSystem } from '@/systems/SaveSystem';
 import { EventBus } from '@/systems/EventBus';
@@ -13,6 +14,7 @@ export class GameScene extends Scene {
   private gameState: GameState;
   private inventory: InventorySystem;
   private lightSystem: LightPuzzleSystem;
+  private mechSystem: MechPuzzleSystem;
   private audio: AudioManager;
   private saveSys: SaveSystem;
   private eventBus: EventBus;
@@ -36,6 +38,7 @@ export class GameScene extends Scene {
     super('GameScene');
     this.inventory = InventorySystem.getInstance();
     this.lightSystem = LightPuzzleSystem.getInstance();
+    this.mechSystem = MechPuzzleSystem.getInstance();
     this.audio = AudioManager.getInstance();
     this.saveSys = SaveSystem.getInstance();
     this.eventBus = EventBus.getInstance();
@@ -49,6 +52,7 @@ export class GameScene extends Scene {
       this.gameState = this.saveSys.getInitialState();
       this.inventory.clear();
       this.lightSystem.reset();
+      this.mechSystem.reset();
       this.archive.reset();
       this.ghostActor.reset();
     } else if (data.loadedState) {
@@ -59,6 +63,7 @@ export class GameScene extends Scene {
       }
       this.gameState.solvedPuzzles.forEach(pid => {
         this.lightSystem.setSolved(pid, true);
+        this.mechSystem.setSolved(pid, true);
       });
       if (this.gameState.archiveState) {
         this.archive.loadState(this.gameState.archiveState);
@@ -249,6 +254,9 @@ export class GameScene extends Scene {
     if (obj.type === 'puzzle' && obj.puzzleId && this.gameState.solvedPuzzles.includes(obj.puzzleId)) {
       obj.solved = true;
     }
+    if (obj.type === 'mech_puzzle' && obj.mechPuzzleId && this.gameState.solvedPuzzles.includes(obj.mechPuzzleId)) {
+      obj.solved = true;
+    }
 
     this.sceneObjectsConfig.set(obj.id, obj);
 
@@ -290,9 +298,15 @@ export class GameScene extends Scene {
         hoverFrame.strokeRoundedRect(-obj.size.x / 2 - 4, -obj.size.y / 2 - 4, obj.size.x + 8, obj.size.y + 8, 10);
         hoverFrame.setVisible(true);
       }
+      if (obj.type === 'mech_puzzle' && obj.mechPuzzleId && this.gameState.solvedPuzzles.includes(obj.mechPuzzleId)) {
+        hoverFrame.lineStyle(3, 0x4ade80, 1);
+        hoverFrame.strokeRoundedRect(-obj.size.x / 2 - 4, -obj.size.y / 2 - 4, obj.size.x + 8, obj.size.y + 8, 10);
+        hoverFrame.setVisible(true);
+      }
 
       container.on('pointerover', () => {
-        if (obj.type === 'puzzle' && obj.puzzleId && this.gameState.solvedPuzzles.includes(obj.puzzleId)) {
+        if ((obj.type === 'puzzle' && obj.puzzleId && this.gameState.solvedPuzzles.includes(obj.puzzleId)) ||
+            (obj.type === 'mech_puzzle' && obj.mechPuzzleId && this.gameState.solvedPuzzles.includes(obj.mechPuzzleId))) {
           hoverFrame.lineStyle(3, 0x4ade80, 1);
         } else {
           hoverFrame.lineStyle(3, 0xffdd44, 1);
@@ -303,7 +317,9 @@ export class GameScene extends Scene {
       });
 
       container.on('pointerout', () => {
-        if (!(obj.type === 'puzzle' && obj.puzzleId && this.gameState.solvedPuzzles.includes(obj.puzzleId))) {
+        const isSolvedPuzzle = (obj.type === 'puzzle' && obj.puzzleId && this.gameState.solvedPuzzles.includes(obj.puzzleId)) ||
+            (obj.type === 'mech_puzzle' && obj.mechPuzzleId && this.gameState.solvedPuzzles.includes(obj.mechPuzzleId));
+        if (!isSolvedPuzzle) {
           hoverFrame.setVisible(false);
         }
         this.scaleTween(container, 1, 120);
@@ -378,6 +394,21 @@ export class GameScene extends Scene {
           } else {
             this.showLightPuzzle(obj.puzzleId);
             this.eventBus.emit('show_puzzle', obj.puzzleId);
+          }
+        }
+        break;
+
+      case 'mech_puzzle':
+        if (obj.mechPuzzleId) {
+          if (this.gameState.solvedPuzzles.includes(obj.mechPuzzleId)) {
+            this.showMessage('这个机关已经解开了。', 2000);
+          } else if (obj.requiredItem && !this.inventory.hasItem(obj.requiredItem)) {
+            this.audio.playSfx('error');
+            const item = this.inventory.getItemData(obj.requiredItem);
+            this.showClueModal(obj.clueText ?? `需要「${item?.name ?? '特定道具'}」才能操作这个机关。`);
+          } else {
+            this.showMechPuzzle(obj.mechPuzzleId);
+            this.eventBus.emit('show_mech_puzzle', obj.mechPuzzleId);
           }
         }
         break;
@@ -874,6 +905,208 @@ export class GameScene extends Scene {
     });
   }
 
+  private activeMechPuzzlePanel: Phaser.GameObjects.Container | null = null;
+
+  private showMechPuzzle(puzzleId: string): void {
+    if (this.activeMechPuzzlePanel) return;
+    const puzzle = this.mechSystem.getPuzzle(puzzleId);
+    if (!puzzle) return;
+
+    this.hideTooltip();
+    const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.75)
+      .setOrigin(0, 0).setDepth(300).setInteractive();
+    this.activeMechPuzzlePanel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(301);
+
+    const pw = 600;
+    const ph = 540;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0f0a, 1);
+    bg.fillRoundedRect(-pw / 2, -ph / 2, pw, ph, 12);
+    bg.lineStyle(2, 0x708090, 0.6);
+    bg.strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, 12);
+    this.activeMechPuzzlePanel.add(bg);
+
+    this.activeMechPuzzlePanel.add(this.add.text(0, -ph / 2 + 36, `⚙️ ${puzzle.name}`, {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '24px',
+      color: '#708090',
+      fontStyle: 'bold'
+    }).setOrigin(0.5));
+
+    this.activeMechPuzzlePanel.add(this.add.text(0, -ph / 2 + 68, '转动阀门使所有指针归零，转动会联动对角线阀门', {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '13px',
+      color: '#888888'
+    }).setOrigin(0.5));
+
+    const hintText = this.add.text(0, -ph / 2 + 96, '💡 提示：0位=12点方向，目标：所有阀门指向0位', {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '13px',
+      color: '#666666'
+    }).setOrigin(0.5);
+    this.activeMechPuzzlePanel.add(hintText);
+
+    const puzzleArea = this.add.container(0, -10);
+    this.activeMechPuzzlePanel.add(puzzleArea);
+
+    const valveAngleMap: Record<number, number> = { 0: 0, 1: 90, 2: 180, 3: 270 };
+
+    const pipeGraphics = this.add.graphics();
+    pipeGraphics.lineStyle(4, 0x708090, 0.3);
+    pipeGraphics.beginPath();
+    pipeGraphics.moveTo(puzzle.valves[0].x - 310, puzzle.valves[0].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[1].x - 310, puzzle.valves[1].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[2].x - 310, puzzle.valves[2].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[3].x - 310, puzzle.valves[3].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[0].x - 310, puzzle.valves[0].y - 210);
+    pipeGraphics.strokePath();
+    pipeGraphics.lineStyle(4, 0x708090, 0.3);
+    pipeGraphics.beginPath();
+    pipeGraphics.moveTo(puzzle.valves[0].x - 310, puzzle.valves[0].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[2].x - 310, puzzle.valves[2].y - 210);
+    pipeGraphics.strokePath();
+    pipeGraphics.beginPath();
+    pipeGraphics.moveTo(puzzle.valves[1].x - 310, puzzle.valves[1].y - 210);
+    pipeGraphics.lineTo(puzzle.valves[3].x - 310, puzzle.valves[3].y - 210);
+    pipeGraphics.strokePath();
+    puzzleArea.add(pipeGraphics);
+
+    const renderValves = () => {
+      puzzleArea.removeAll(false);
+      puzzleArea.add(pipeGraphics);
+
+      puzzle.valves.forEach(valve => {
+        const vc = this.add.container(valve.x - 310, valve.y - 210);
+        const r = 40;
+
+        const g = this.add.graphics();
+        g.fillStyle(0x1a2a1a, 1);
+        g.fillCircle(0, 0, r + 6);
+        g.lineStyle(3, valve.position === 0 ? 0x4ade80 : 0x708090, 1);
+        g.fillStyle(valve.position === 0 ? 0x2a4a2a : 0x2a2a2a, 1);
+        g.fillCircle(0, 0, r);
+        g.strokeCircle(0, 0, r);
+
+        const angle = (valveAngleMap[valve.position] ?? 0) * Math.PI / 180;
+        const pointerLen = r - 8;
+        g.lineStyle(4, valve.position === 0 ? 0x4ade80 : 0xc9a44c, 1);
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(Math.sin(angle) * pointerLen, -Math.cos(angle) * pointerLen);
+        g.strokePath();
+
+        g.fillStyle(0xc9a44c, 1);
+        g.fillCircle(0, 0, 6);
+        vc.add(g);
+
+        vc.add(this.add.text(0, r + 14, `V${valve.id}`, {
+          fontFamily: 'Georgia, serif',
+          fontSize: '14px',
+          color: valve.position === 0 ? '#4ade80' : '#888888',
+          fontStyle: 'bold'
+        }).setOrigin(0.5));
+
+        vc.add(this.add.text(0, -r - 14, `${valve.position}/${valve.maxPositions}`, {
+          fontFamily: 'Georgia, serif',
+          fontSize: '12px',
+          color: valve.position === 0 ? '#4ade80' : '#c9a44c'
+        }).setOrigin(0.5));
+
+        vc.setSize(r * 2 + 20, r * 2 + 20);
+        vc.setInteractive({ useHandCursor: true });
+        vc.on('pointerover', () => vc.setScale(1.08));
+        vc.on('pointerout', () => vc.setScale(1));
+        vc.on('pointerdown', () => {
+          this.audio.playSfx('valve');
+          this.mechSystem.rotateValve(puzzleId, valve.id);
+          this.audio.playSfx('steam');
+          renderValves();
+
+          if (this.mechSystem.isSolved(puzzleId)) {
+            this.time.delayedCall(400, () => this.onMechPuzzleSolved(puzzleId, reward));
+          }
+        });
+
+        puzzleArea.add(vc);
+      });
+    };
+
+    const reward = puzzle.reward;
+    renderValves();
+
+    const resetBtn = this.createPanelBtn(-120, ph / 2 - 60, 180, 44, '🔄 重置机关', '#555555', () => {
+      this.audio.playSfx('mechanism');
+      this.mechSystem.resetPuzzle(puzzleId);
+      renderValves();
+    });
+    this.activeMechPuzzlePanel.add(resetBtn);
+
+    const closeBtn = this.createPanelBtn(120, ph / 2 - 60, 180, 44, '❌ 关闭', '#8b4513', () => {
+      this.audio.playSfx('click');
+      this.closeMechPuzzle();
+      overlay.destroy();
+    });
+    this.activeMechPuzzlePanel.add(closeBtn);
+  }
+
+  private onMechPuzzleSolved(puzzleId: string, reward?: string): void {
+    if (this.gameState.solvedPuzzles.includes(puzzleId)) return;
+
+    this.audio.playSfx('mechanism');
+    this.time.delayedCall(600, () => {
+      this.audio.playSfx('success');
+    });
+
+    this.gameState.solvedPuzzles.push(puzzleId);
+    this.eventBus.emit('puzzle_solve', puzzleId);
+    this.eventBus.emit('mech_puzzle_solve', puzzleId);
+
+    this.showFloatingText('⚙️ 机关解开了！', 0x4ade80);
+
+    if (reward) {
+      this.time.delayedCall(800, () => {
+        this.audio.playSfx('pickup');
+        this.inventory.addItem(reward);
+        this.gameState.collectedItems.push(reward);
+        const data = this.inventory.getItemData(reward);
+        this.showClueModal(`机关奖励！\n\n获得了「${data?.name ?? ''}」\n${data?.description ?? ''}`);
+        this.eventBus.emit('item_pickup', reward);
+      });
+    }
+
+    this.time.delayedCall(1800, () => {
+      this.closeMechPuzzle();
+    });
+    this.autoSave();
+
+    const puzzleObj = Array.from(this.sceneObjectsConfig.values()).find(o => o.mechPuzzleId === puzzleId);
+    if (puzzleObj) {
+      const cont = this.sceneObjects.get(puzzleObj.id);
+      if (cont) {
+        cont.iterate((child: unknown) => {
+          if ((child as Phaser.GameObjects.Graphics).strokeRoundedRect) {
+            const g = child as Phaser.GameObjects.Graphics;
+            g.lineStyle(3, 0x4ade80, 1);
+          }
+        });
+      }
+    }
+  }
+
+  private closeMechPuzzle(): void {
+    if (this.activeMechPuzzlePanel) {
+      this.activeMechPuzzlePanel.destroy();
+      this.activeMechPuzzlePanel = null;
+    }
+    this.children.each(child => {
+      if ((child as Phaser.GameObjects.Rectangle).fillColor === 0x000000 &&
+          (child as Phaser.GameObjects.Rectangle).depth === 300) {
+        child.destroy();
+      }
+    });
+  }
+
   private messageContainer: Phaser.GameObjects.Container | null = null;
   showMessage(text: string, duration = 3000): void {
     this.messageQueue.push({ text, duration });
@@ -1050,6 +1283,14 @@ export class GameScene extends Scene {
       }
       if (obj.type === 'puzzle' && obj.puzzleId && !this.gameState.solvedPuzzles.includes(obj.puzzleId)) {
         hints.push(`💡 试试「${obj.name}」的灯光谜题`);
+      }
+      if (obj.type === 'mech_puzzle' && obj.mechPuzzleId && !this.gameState.solvedPuzzles.includes(obj.mechPuzzleId)) {
+        if (obj.requiredItem && !this.inventory.hasItem(obj.requiredItem)) {
+          const item = this.inventory.getItemData(obj.requiredItem);
+          hints.push(`⚙️「${obj.name}」需要「${item?.name ?? '特定道具'}」才能操作`);
+        } else {
+          hints.push(`⚙️ 试试「${obj.name}」的阀门联动机关`);
+        }
       }
       if (obj.type === 'door' && obj.requiredItem && !this.gameState.openedDoors.includes(obj.id)) {
         if (this.inventory.hasItem(obj.requiredItem)) {

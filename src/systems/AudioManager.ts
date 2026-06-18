@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 
-export type SfxType = 'pickup' | 'click' | 'success' | 'error' | 'door' | 'light' | 'win' | 'lose';
+export type SfxType = 'pickup' | 'click' | 'success' | 'error' | 'door' | 'light' | 'win' | 'lose' | 'mechanism' | 'valve' | 'steam';
 
 export class AudioManager {
   private static instance: AudioManager;
@@ -64,7 +64,10 @@ export class AudioManager {
       door: 'sfx_door',
       light: 'sfx_light',
       win: 'sfx_win',
-      lose: 'sfx_lose'
+      lose: 'sfx_lose',
+      mechanism: 'sfx_mechanism',
+      valve: 'sfx_valve',
+      steam: 'sfx_steam'
     };
 
     const key = keyMap[type];

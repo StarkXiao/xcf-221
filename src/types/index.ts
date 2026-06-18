@@ -29,6 +29,24 @@ export interface LightState {
   on: boolean;
 }
 
+export interface MechValveState {
+  id: number;
+  x: number;
+  y: number;
+  position: number;
+  maxPositions: number;
+  linkedValveIds: number[];
+}
+
+export interface MechPuzzle {
+  id: string;
+  name: string;
+  valves: MechValveState[];
+  targetPattern: number[];
+  solved: boolean;
+  reward?: string;
+}
+
 export interface SceneObject {
   id: string;
   name: string;
@@ -36,12 +54,13 @@ export interface SceneObject {
   size: Vector2;
   spriteKey: string;
   interactive: boolean;
-  type: 'item' | 'door' | 'puzzle' | 'clue' | 'exit';
+  type: 'item' | 'door' | 'puzzle' | 'clue' | 'exit' | 'mech_puzzle';
   requiredItem?: string;
   containsItem?: string;
   targetScene?: string;
   clueText?: string;
   puzzleId?: string;
+  mechPuzzleId?: string;
   collected?: boolean;
   solved?: boolean;
 }

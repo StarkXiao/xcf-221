@@ -1,4 +1,4 @@
-import type { Item, SceneConfig, LightPuzzle, EndingData } from '@/types';
+import type { Item, SceneConfig, LightPuzzle, MechPuzzle, EndingData } from '@/types';
 
 export const GAME_VERSION = '1.0.0';
 
@@ -107,6 +107,45 @@ export const ITEMS: Record<string, Item> = {
     description: '「思远，如果你看到这封信...」——字迹到这里就断了，纸上有泪痕',
     icon: '✉️',
     canCombine: false
+  },
+  gear_worn: {
+    id: 'gear_worn',
+    name: '磨损的齿轮',
+    description: '一只锈迹斑驳的铜齿轮，齿牙几乎磨平，似乎无法正常咬合',
+    icon: '⚙️',
+    canCombine: true,
+    combineWith: ['oil_can'],
+    combineResult: 'gear_restored'
+  },
+  oil_can: {
+    id: 'oil_can',
+    name: '润滑油壶',
+    description: '一壶尚有余量的机械润滑油，可以润滑锈蚀的零件',
+    icon: '🛢️',
+    canCombine: true,
+    combineWith: ['gear_worn'],
+    combineResult: 'gear_restored'
+  },
+  gear_restored: {
+    id: 'gear_restored',
+    name: '修复的齿轮',
+    description: '经过润滑的铜齿轮，齿牙恢复了光泽，可以重新嵌入机关',
+    icon: '🔧',
+    canCombine: false
+  },
+  valve_handle: {
+    id: 'valve_handle',
+    name: '阀门手轮',
+    description: '一只铸铁手轮，可以安装在管道阀门上控制蒸汽流向',
+    icon: '🔄',
+    canCombine: false
+  },
+  mech_room_key: {
+    id: 'mech_room_key',
+    name: '机械房钥匙',
+    description: '沉甸甸的铁钥匙，上面刻着齿轮纹章——这是地下机械房的通行凭证',
+    icon: '🗝️',
+    canCombine: false
   }
 };
 
@@ -139,6 +178,22 @@ export const LIGHT_PUZZLES: Record<string, LightPuzzle> = {
     pattern: [true, true, true, false, false],
     solved: false,
     reward: 'final_key'
+  }
+};
+
+export const MECH_PUZZLES: Record<string, MechPuzzle> = {
+  mech_valve_puzzle: {
+    id: 'mech_valve_puzzle',
+    name: '蒸汽阀门联动谜题',
+    valves: [
+      { id: 0, x: 220, y: 200, position: 2, maxPositions: 4, linkedValveIds: [1, 3] },
+      { id: 1, x: 420, y: 200, position: 1, maxPositions: 4, linkedValveIds: [0, 2] },
+      { id: 2, x: 620, y: 200, position: 3, maxPositions: 4, linkedValveIds: [1, 3] },
+      { id: 3, x: 420, y: 360, position: 0, maxPositions: 4, linkedValveIds: [0, 2] }
+    ],
+    targetPattern: [0, 0, 0, 0],
+    solved: false,
+    reward: 'mech_room_key'
   }
 };
 
@@ -438,6 +493,118 @@ export const SCENES: Record<string, SceneConfig> = {
         type: 'exit',
         targetScene: 'auditorium',
         clueText: '返回观众厅。'
+      },
+      {
+        id: 'door_to_mech_room',
+        name: '地下室入口',
+        position: { x: 780, y: 450 },
+        size: { x: 80, y: 120 },
+        spriteKey: 'obj_hatch_door',
+        interactive: true,
+        type: 'door',
+        requiredItem: 'mech_room_key',
+        targetScene: 'mechanical_room',
+        clueText: '地板上一扇生锈的铁门，锁孔形状像齿轮...需要特殊的钥匙。'
+      }
+    ]
+  },
+  mechanical_room: {
+    id: 'mechanical_room',
+    name: '地下机械房',
+    backgroundKey: 'bg_mechanical',
+    ambientColor: 0x1a1a1a,
+    description: '阴冷的地下空间，管道纵横交错，蒸汽从锈蚀的接缝中嘶嘶作响。巨大的齿轮组沉默地矗立在中央，等待着被唤醒。',
+    objects: [
+      {
+        id: 'workbench_oil',
+        name: '工具台',
+        position: { x: 160, y: 400 },
+        size: { x: 120, y: 80 },
+        spriteKey: 'obj_workbench',
+        interactive: true,
+        type: 'item',
+        containsItem: 'oil_can',
+        collected: false,
+        clueText: '工具台上放着一壶润滑油，瓶身上的标签已经模糊不清，但还能闻到刺鼻的油味。'
+      },
+      {
+        id: 'gear_rack',
+        name: '齿轮架',
+        position: { x: 750, y: 350 },
+        size: { x: 100, y: 140 },
+        spriteKey: 'obj_gear_rack',
+        interactive: true,
+        type: 'item',
+        containsItem: 'gear_worn',
+        collected: false,
+        clueText: '架子上挂着一枚磨损严重的铜齿轮，齿牙已被岁月磨平...如果能润滑一下，也许还能用。'
+      },
+      {
+        id: 'valve_bench',
+        name: '备件箱',
+        position: { x: 840, y: 180 },
+        size: { x: 90, y: 80 },
+        spriteKey: 'obj_crate',
+        interactive: true,
+        type: 'item',
+        containsItem: 'valve_handle',
+        collected: false,
+        clueText: '箱子里翻出一只铸铁手轮，大小刚好能套在管道阀门上。'
+      },
+      {
+        id: 'mech_valve_panel',
+        name: '蒸汽控制台',
+        position: { x: 420, y: 280 },
+        size: { x: 160, y: 180 },
+        spriteKey: 'obj_valve_panel',
+        interactive: true,
+        type: 'mech_puzzle',
+        mechPuzzleId: 'mech_valve_puzzle',
+        requiredItem: 'valve_handle',
+        solved: false
+      },
+      {
+        id: 'gear_mechanism',
+        name: '中央齿轮组',
+        position: { x: 420, y: 480 },
+        size: { x: 140, y: 100 },
+        spriteKey: 'obj_gear_mechanism',
+        interactive: true,
+        type: 'door',
+        requiredItem: 'gear_restored',
+        targetScene: 'backstage',
+        clueText: '巨大的齿轮组缺少一枚关键齿轮，无法咬合运转...需要找到合适的齿轮嵌入其中。'
+      },
+      {
+        id: 'mech_wall_note',
+        name: '墙上的标语',
+        position: { x: 120, y: 200 },
+        size: { x: 100, y: 60 },
+        spriteKey: 'obj_wall_note',
+        interactive: true,
+        type: 'clue',
+        clueText: '褪色的标语写着：「所有阀门归零，蒸汽方能通达——安全操作规程第7条」'
+      },
+      {
+        id: 'pipe_clue',
+        name: '管道标识',
+        position: { x: 600, y: 150 },
+        size: { x: 80, y: 40 },
+        spriteKey: 'obj_pipe_label',
+        interactive: true,
+        type: 'clue',
+        clueText: '管道上用油漆标注的箭头和编号：0号→1号→2号→3号，形成一个菱形回路。转动任一阀门会联动对角线上的两个阀门。'
+      },
+      {
+        id: 'back_to_backstage',
+        name: '返回后台',
+        position: { x: 40, y: 550 },
+        size: { x: 100, y: 60 },
+        spriteKey: 'obj_exit_sign',
+        interactive: true,
+        type: 'exit',
+        targetScene: 'backstage',
+        clueText: '爬上铁梯回到后台。'
       }
     ]
   }
@@ -627,6 +794,28 @@ export const CLUES: Record<string, Clue> = {
     discovered: false,
     icon: '💡',
     description: '灯光密码背后的仪式含义'
+  },
+  clue_mech_room_history: {
+    id: 'clue_mech_room_history',
+    title: '地下机械房',
+    content: '剧院地下有一间被遗忘的机械房，曾经是整座剧院的蒸汽动力中心。大火之后，这里被封死。据说陈思远曾独自来此进行仪式的准备工作，他修改了管道走向，让蒸汽成为一种「灵媒」。',
+    category: 'location',
+    tags: ['机械房', '地下', '蒸汽', '仪式准备', '管道'],
+    relatedClues: ['clue_theater_founder', 'clue_secret_letter'],
+    discovered: false,
+    icon: '🏭',
+    description: '关于地下机械房的记录'
+  },
+  clue_valve_mechanism: {
+    id: 'clue_valve_mechanism',
+    title: '阀门联动原理',
+    content: '四座阀门通过管道以菱形方式连接，转动一个阀门会沿对角线联动另外两个。安全规程要求所有阀门归零才能启动蒸汽——这是某种设计上的安全互锁，也是谜题的关键。',
+    category: 'item',
+    tags: ['阀门', '联动', '菱形', '归零', '蒸汽'],
+    relatedClues: ['clue_mech_room_history'],
+    discovered: false,
+    icon: '🔄',
+    description: '蒸汽阀门系统的运作原理'
   }
 };
 

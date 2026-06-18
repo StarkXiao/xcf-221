@@ -75,7 +75,8 @@ export class PreloadScene extends Scene {
       { key: 'bg_lobby', bg: 0x1a0a0a, accent: 0x8b0000 },
       { key: 'bg_auditorium', bg: 0x0a1a1a, accent: 0x006400 },
       { key: 'bg_projection', bg: 0x111122, accent: 0x4169e1 },
-      { key: 'bg_backstage', bg: 0x221a0a, accent: 0xb8860b }
+      { key: 'bg_backstage', bg: 0x221a0a, accent: 0xb8860b },
+      { key: 'bg_mechanical', bg: 0x1a1a1a, accent: 0x708090 }
     ];
 
     backgrounds.forEach(({ key, bg, accent }) => {
@@ -137,7 +138,11 @@ export class PreloadScene extends Scene {
       'obj_poster', 'obj_counter', 'obj_panel', 'obj_junk',
       'obj_door', 'obj_seat', 'obj_door_small', 'obj_door_silver',
       'obj_exit_sign', 'obj_projector', 'obj_shelf', 'obj_desk',
-      'obj_vanity', 'obj_spotlight_panel', 'obj_final_door'
+      'obj_vanity', 'obj_spotlight_panel', 'obj_final_door',
+      'obj_hatch_door', 'obj_workbench', 'obj_gear_rack', 'obj_crate',
+      'obj_valve_panel', 'obj_gear_mechanism', 'obj_wall_note', 'obj_pipe_label',
+      'obj_seat_small', 'obj_windowsill', 'obj_hanger', 'obj_drawer',
+      'obj_mirror_ghost', 'obj_ghost'
     ];
 
     objects.forEach(key => {
@@ -161,7 +166,21 @@ export class PreloadScene extends Scene {
       obj_desk: { w: 120, h: 80, color: 0x8b4513, type: 'desk' },
       obj_vanity: { w: 140, h: 100, color: 0xd4af37, type: 'vanity' },
       obj_spotlight_panel: { w: 140, h: 180, color: 0x1a1a2e, type: 'panel' },
-      obj_final_door: { w: 100, h: 180, color: 0xd4af37, type: 'door' }
+      obj_final_door: { w: 100, h: 180, color: 0xd4af37, type: 'door' },
+      obj_hatch_door: { w: 80, h: 120, color: 0x4a4a4a, type: 'door' },
+      obj_workbench: { w: 120, h: 80, color: 0x5c4033, type: 'workbench' },
+      obj_gear_rack: { w: 100, h: 140, color: 0x696969, type: 'gear_rack' },
+      obj_crate: { w: 90, h: 80, color: 0x8b7355, type: 'crate' },
+      obj_valve_panel: { w: 160, h: 180, color: 0x2f4f4f, type: 'panel' },
+      obj_gear_mechanism: { w: 140, h: 100, color: 0x8b8b00, type: 'gear_mechanism' },
+      obj_wall_note: { w: 100, h: 60, color: 0xf5f5dc, type: 'wall_note' },
+      obj_pipe_label: { w: 80, h: 40, color: 0xb22222, type: 'pipe_label' },
+      obj_seat_small: { w: 60, h: 50, color: 0x8b0000, type: 'seat' },
+      obj_windowsill: { w: 90, h: 50, color: 0x8b8b83, type: 'sign' },
+      obj_hanger: { w: 70, h: 140, color: 0x5c4033, type: 'shelf' },
+      obj_drawer: { w: 80, h: 40, color: 0x8b4513, type: 'desk' },
+      obj_mirror_ghost: { w: 100, h: 160, color: 0x9370db, type: 'vanity' },
+      obj_ghost: { w: 80, h: 120, color: 0x9370db, type: 'sign' }
     };
 
     const cfg = sizeMap[key];
@@ -197,7 +216,9 @@ export class PreloadScene extends Scene {
     const labelMap: Record<string, string> = {
       poster: '海报', counter: '柜台', panel: '控制面板', junk: '杂物',
       door: '门', seat: '座位', sign: '返回', projector: '放映机',
-      shelf: '胶片架', desk: '办公桌', vanity: '化妆台'
+      shelf: '胶片架', desk: '办公桌', vanity: '化妆台',
+      workbench: '工具台', gear_rack: '齿轮架', crate: '备件箱',
+      gear_mechanism: '齿轮组', wall_note: '标语', pipe_label: '管道'
     };
     if (labelMap[cfg.type]) {
       ctx.fillText(labelMap[cfg.type], cfg.w / 2, cfg.h - 8);
@@ -297,6 +318,72 @@ export class PreloadScene extends Scene {
           ctx.fill();
         }
         break;
+      case 'workbench':
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(w * 0.1, h * (0.2 + i * 0.25), w * 0.25, h * 0.15);
+        }
+        ctx.fillStyle = 'rgba(139,69,19,0.5)';
+        ctx.fillRect(0, h * 0.7, w, h * 0.3);
+        break;
+      case 'gear_rack':
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(0, h * (i + 1) / 4, w, 3);
+        }
+        for (let i = 0; i < 3; i++) {
+          ctx.strokeStyle = 'rgba(150,150,150,0.6)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(w * 0.5, h * (0.15 + i * 0.3), 12, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        break;
+      case 'crate':
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.5);
+        ctx.lineTo(w, h * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, 0);
+        ctx.lineTo(w * 0.5, h);
+        ctx.stroke();
+        break;
+      case 'gear_mechanism':
+        for (let i = 0; i < 2; i++) {
+          ctx.strokeStyle = 'rgba(180,180,0,0.6)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(w * (0.3 + i * 0.4), h * 0.5, 20, 0, Math.PI * 2);
+          ctx.stroke();
+          for (let t = 0; t < 8; t++) {
+            const a = (t / 8) * Math.PI * 2;
+            ctx.fillStyle = 'rgba(180,180,0,0.4)';
+            ctx.fillRect(
+              w * (0.3 + i * 0.4) + Math.cos(a) * 18 - 3,
+              h * 0.5 + Math.sin(a) * 18 - 3,
+              6, 6
+            );
+          }
+        }
+        break;
+      case 'wall_note':
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        this.roundRect(ctx, 6, 4, w - 12, h - 8, 3);
+        ctx.fill();
+        ctx.fillStyle = '#8b0000';
+        ctx.font = '8px Microsoft YaHei';
+        ctx.textAlign = 'center';
+        ctx.fillText('安全规程', w / 2, h / 2 + 3);
+        break;
+      case 'pipe_label':
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '8px Microsoft YaHei';
+        ctx.textAlign = 'center';
+        ctx.fillText('0→1→2→3', w / 2, h / 2 + 3);
+        break;
     }
   }
 
@@ -310,7 +397,10 @@ export class PreloadScene extends Scene {
       { key: 'sfx_door', freq: 120, duration: 0.5, type: 'sine', isBgm: false },
       { key: 'sfx_light', freq: 520, duration: 0.1, type: 'square', isBgm: false },
       { key: 'sfx_win', freq: 523, duration: 0.8, type: 'sine', isBgm: false },
-      { key: 'sfx_lose', freq: 200, duration: 0.8, type: 'sawtooth', isBgm: false }
+      { key: 'sfx_lose', freq: 200, duration: 0.8, type: 'sawtooth', isBgm: false },
+      { key: 'sfx_mechanism', freq: 100, duration: 0.6, type: 'sawtooth', isBgm: false },
+      { key: 'sfx_valve', freq: 300, duration: 0.2, type: 'square', isBgm: false },
+      { key: 'sfx_steam', freq: 2500, duration: 0.5, type: 'sine', isBgm: false }
     ];
 
     audioKeys.forEach(({ key, freq, duration, type, isBgm }) => {
