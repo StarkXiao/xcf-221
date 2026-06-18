@@ -835,7 +835,8 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     id: 'ga_quest_defer',
     speaker: '林婉清',
     text: '好的......我就在这附近徘徊，你想找我的时候就来观众厅或者后台吧。我等你。',
-    emotion: 'sad'
+    emotion: 'sad',
+    nextDialogId: 'ga_generic_chat'
   },
   ga_quest_detail: {
     id: 'ga_quest_detail',
@@ -860,7 +861,8 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     id: 'ga_end_quest_info',
     speaker: '林婉清',
     text: '你随时可以来找我。如果收集到了什么，就带给我看看吧。希望......这次真的能让一切结束。',
-    emotion: 'hopeful'
+    emotion: 'hopeful',
+    nextDialogId: 'ga_generic_chat'
   },
   ga_return_photo: {
     id: 'ga_return_photo',
@@ -907,7 +909,8 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     id: 'ga_after_item_generic',
     speaker: '林婉清',
     text: '......还有其他东西吗？如果还能找到更多，也许我就有勇气去面对他了。',
-    emotion: 'hopeful'
+    emotion: 'hopeful',
+    nextDialogId: 'ga_generic_chat'
   },
   ga_after_letter: {
     id: 'ga_after_letter',
@@ -951,7 +954,8 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     speaker: '林婉清',
     text: '谢谢你......我好像......已经很久没有这样期待过什么了。你一定是上天派来帮助我们的人。',
     emotion: 'happy',
-    autoUnlockFlag: 'promise_made'
+    autoUnlockFlag: 'promise_made',
+    nextDialogId: 'ga_generic_chat'
   },
   ga_all_items_delivered: {
     id: 'ga_all_items_delivered',
@@ -960,9 +964,9 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     emotion: 'hopeful',
     backgroundEffect: 'fade',
     choices: [
-      { id: 'aid_1', text: '（握住她的手）我们一起。', nextDialogId: 'ga_reunion_good', trustChange: 20, triggerEnding: 'ga_reunion_perfect', requiresMinTrust: 80 },
+      { id: 'aid_1', text: '（握住她的手）我们一起。', nextDialogId: 'ga_reunion_perfect', trustChange: 20, triggerEnding: 'ga_reunion_perfect', requiresMinTrust: 80 },
       { id: 'aid_2', text: '开始吧，我看着。', nextDialogId: 'ga_reunion_good', triggerEnding: 'ga_reunion_normal' },
-      { id: 'aid_3', text: '等等......用夜莺胸针试试？', nextDialogId: 'ga_reunion_perfect', requiredItem: 'nightingale_brooch', trustChange: 10, triggerEnding: 'ga_reunion_perfect' }
+      { id: 'aid_3', text: '等等......用夜莺胸针试试？', nextDialogId: 'ga_reunion_brooch', requiredItem: 'nightingale_brooch', takeItem: 'nightingale_brooch', trustChange: 10, triggerEnding: 'ga_reunion_perfect' }
     ],
     autoUnlockFlag: 'ritual_ready'
   },
@@ -977,11 +981,18 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
   ga_reunion_perfect: {
     id: 'ga_reunion_perfect',
     speaker: '林婉清',
+    text: '（你紧紧握住她的手。温暖的触感传来，她的身影渐渐凝实。四样东西开始发光，空气中浮现出另一道身影......是陈思远。）',
+    emotion: 'happy',
+    backgroundEffect: 'flash',
+    nextDialogId: 'ga_reunion_perfect_2'
+  },
+  ga_reunion_brooch: {
+    id: 'ga_reunion_brooch',
+    speaker: '林婉清',
     text: '（夜莺胸针在你手中发出温柔的光芒，在空中划出银色的轨迹。四样东西悬浮起来，两道身影在光芒中逐渐清晰......）',
     emotion: 'happy',
     backgroundEffect: 'flash',
-    nextDialogId: 'ga_reunion_perfect_2',
-    autoGiveItem: 'nightingale_brooch'
+    nextDialogId: 'ga_reunion_perfect_2'
   },
   ga_reunion_2: {
     id: 'ga_reunion_2',
@@ -1059,13 +1070,15 @@ export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
     id: 'ga_check_inventory',
     speaker: '林婉清',
     text: '你找到什么了吗？让我看看......',
-    emotion: 'hopeful'
+    emotion: 'hopeful',
+    nextDialogId: 'ga_generic_chat'
   },
   ga_end_conversation: {
     id: 'ga_end_conversation',
     speaker: '林婉清',
     text: '好的，小心点。剧院里有些地方......不太安全。如果你看到其他奇怪的东西......就当作没看见吧。',
-    emotion: 'sad'
+    emotion: 'sad',
+    nextDialogId: 'ga_generic_chat'
   }
 };
 

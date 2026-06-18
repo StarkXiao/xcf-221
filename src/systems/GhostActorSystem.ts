@@ -54,6 +54,8 @@ export class GhostActorSystem {
   public reset(): void {
     this.state = JSON.parse(JSON.stringify(INITIAL_GHOST_ACTOR_STATE));
     this.listeners = [];
+    this.trustNotifySuspended = false;
+    this.pendingTrustDelta = 0;
   }
 
   public getTrustLevel(): string {
@@ -79,13 +81,33 @@ export class GhostActorSystem {
     return Math.max(0, Math.min(100, (this.state.trustValue / this.state.maxTrust) * 100));
   }
 
+  private trustNotifySuspended = false;
+  private pendingTrustDelta = 0;
+
   public addTrust(amount: number): void {
     const old = this.state.trustValue;
     this.state.trustValue = Math.max(0, Math.min(this.state.maxTrust, this.state.trustValue + amount));
     const delta = this.state.trustValue - old;
     if (delta !== 0) {
-      this.notify({ type: 'trust', delta });
+      if (this.trustNotifySuspended) {
+        this.pendingTrustDelta += delta;
+      } else {
+        this.notify({ type: 'trust', delta });
+      }
     }
+  }
+
+  private suspendTrustNotify(): void {
+    this.trustNotifySuspended = true;
+    this.pendingTrustDelta = 0;
+  }
+
+  private resumeTrustNotify(): void {
+    this.trustNotifySuspended = false;
+    if (this.pendingTrustDelta !== 0) {
+      this.notify({ type: 'trust', delta: this.pendingTrustDelta });
+    }
+    this.pendingTrustDelta = 0;
   }
 
   public hasFlag(flag: string): boolean {
@@ -169,19 +191,18 @@ export class GhostActorSystem {
       this.inventory.hasItem(id) && !this.hasDeliveredItem(id)
     );
 
-    if (this.hasFlag('quest_started') && hasAnyToDeliver && !this.state.dialogHistory.includes('ga_check_inventory')) {
-      const photoDialogId = 'ga_return_photo';
+    if (this.hasFlag('quest_started') && hasAnyToDeliver) {
+      if (this.inventory.hasItem('unfinished_letter') && !this.hasDeliveredItem('unfinished_letter')) {
+        return 'ga_return_letter';
+      }
       if (this.inventory.hasItem('old_photo') && !this.hasDeliveredItem('old_photo')) {
-        return photoDialogId;
+        return 'ga_return_photo';
       }
       if (this.inventory.hasItem('costume_fragment') && !this.hasDeliveredItem('costume_fragment')) {
         return 'ga_return_costume';
       }
       if (this.inventory.hasItem('wilted_rose') && !this.hasDeliveredItem('wilted_rose')) {
         return 'ga_return_rose';
-      }
-      if (this.inventory.hasItem('unfinished_letter') && !this.hasDeliveredItem('unfinished_letter')) {
-        return 'ga_return_letter';
       }
     }
 
@@ -192,7 +213,7 @@ export class GhostActorSystem {
       return 'ga_all_items_delivered';
     }
 
-    if (this.hasFlag('met_wanqing') && !this.state.dialogHistory.includes('ga_generic_chat')) {
+    if (this.hasFlag('met_wanqing')) {
       return 'ga_generic_chat';
     }
 
@@ -260,6 +281,8 @@ export class GhostActorSystem {
     const availability = this.checkChoiceAvailability(choice);
     if (!availability.available) return null;
 
+    this.suspendTrustNotify();
+
     if (choice.trustChange) {
       this.addTrust(choice.trustChange);
     }
@@ -280,10 +303,16 @@ export class GhostActorSystem {
     if (choice.triggerEnding) {
       this.state.endingTriggered = choice.triggerEnding;
       endingTriggered = choice.triggerEnding;
-      this.notify({ type: 'ending', value: choice.triggerEnding });
     }
 
     const result = this.advanceDialog(choice.nextDialogId);
+
+    this.resumeTrustNotify();
+
+    if (endingTriggered) {
+      this.notify({ type: 'ending', value: endingTriggered });
+    }
+
     if (result) {
       if (choice.trustChange) result.trustChanged += choice.trustChange;
       if (endingTriggered) result.endingTriggered = endingTriggered;

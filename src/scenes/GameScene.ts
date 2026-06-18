@@ -129,13 +129,6 @@ export class GameScene extends Scene {
 
     this.ghostActor.onChange((event) => {
       if (event.type === 'trust') {
-        const delta = event.delta as number;
-        if (delta !== undefined && delta !== 0) {
-          const sign = delta > 0 ? '+' : '';
-          this.time.delayedCall(300, () => {
-            this.showFloatingText(`💗 信任 ${sign}${delta}`, Phaser.Display.Color.HexStringToColor(this.ghostActor.getTrustColor()).color);
-          });
-        }
         this.updateTrustBarUI();
       }
       if (event.type === 'item_deliver') {
@@ -151,6 +144,15 @@ export class GameScene extends Scene {
         this.time.delayedCall(400, () => {
           this.showFloatingText(`✨ 获得: ${item?.name ?? itemId}`, 0xc9a44c);
         });
+      }
+      if (event.type === 'flag') {
+        const flag = event.value as string;
+        if (flag === 'met_wanqing') {
+          this.createTrustBar();
+          if (this.trustBar) {
+            this.trustBar.setDepth(352);
+          }
+        }
       }
       if (event.type === 'quest_complete') {
         this.time.delayedCall(800, () => {
@@ -1120,6 +1122,11 @@ export class GameScene extends Scene {
     const w = 220;
     const h = 44;
 
+    const barX = -w + 44;
+    const barY = 4;
+    const barW = w - 60;
+    const barH = 10;
+
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.85);
     bg.fillRoundedRect(-w, -h / 2, w, h, 8);
@@ -1140,11 +1147,6 @@ export class GameScene extends Scene {
     }).setOrigin(0, 0.5);
     this.trustBar.add(labelText);
 
-    const barX = -w + 44;
-    const barY = 4;
-    const barW = w - 60;
-    const barH = 10;
-
     const barBg = this.add.graphics();
     barBg.fillStyle(0x222222, 1);
     barBg.fillRoundedRect(barX, barY - barH / 2, barW, barH, 4);
@@ -1157,8 +1159,6 @@ export class GameScene extends Scene {
     barFill.fillStyle(fillColor, 1);
     barFill.fillRoundedRect(barX, barY - barH / 2, fillW, barH, 4);
     this.trustBar.add(barFill);
-    barFill.setData('width', barW);
-    barFill.setData('fill', barFill);
 
     const levelText = this.add.text(-16, -12, this.ghostActor.getTrustLevel(), {
       fontFamily: 'Microsoft YaHei, sans-serif',
@@ -1174,6 +1174,10 @@ export class GameScene extends Scene {
     }).setOrigin(1, 0.5);
     this.trustBar.add(pctText);
 
+    this.trustBar.setData('barX', barX);
+    this.trustBar.setData('barY', barY);
+    this.trustBar.setData('barH', barH);
+    this.trustBar.setData('barW', barW);
     this.trustBar.setData('barFill', barFill);
     this.trustBar.setData('levelText', levelText);
     this.trustBar.setData('pctText', pctText);
@@ -1197,14 +1201,17 @@ export class GameScene extends Scene {
     const pctText = this.trustBar.getData('pctText') as Phaser.GameObjects.Text;
 
     if (barFill && levelText && pctText) {
-      const barW = barFill.getData('width') as number;
+      const barX = this.trustBar.getData('barX') as number;
+      const barY = this.trustBar.getData('barY') as number;
+      const barH = this.trustBar.getData('barH') as number;
+      const barW = this.trustBar.getData('barW') as number;
       const pct = this.ghostActor.getTrustPercentage();
       const fillW = (barW * pct) / 100;
       const fillColor = Phaser.Display.Color.HexStringToColor(this.ghostActor.getTrustColor()).color;
 
       barFill.clear();
       barFill.fillStyle(fillColor, 1);
-      barFill.fillRoundedRect(118, -1, fillW, 10, 4);
+      barFill.fillRoundedRect(barX, barY - barH / 2, fillW, barH, 4);
 
       levelText.setText(this.ghostActor.getTrustLevel());
       levelText.setColor(this.ghostActor.getTrustColor());
@@ -1238,6 +1245,10 @@ export class GameScene extends Scene {
     const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.82)
       .setOrigin(0, 0).setDepth(350).setInteractive();
     this.dialogPanel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40).setDepth(351);
+
+    if (this.trustBar) {
+      this.trustBar.setDepth(352);
+    }
 
     const pw = 780;
     const ph = 380;
@@ -1298,12 +1309,26 @@ export class GameScene extends Scene {
     }
 
     if (infoTexts.length > 0) {
-      this.dialogPanel.add(this.add.text(0, 50, infoTexts.join('    '), {
+      const infoBg = this.add.graphics();
+      const infoBgY = 36;
+      infoBg.fillStyle(0x1a3a1a, 0.6);
+      infoBg.fillRoundedRect(-pw / 2 + 40, infoBgY, pw - 80, 30, 6);
+      this.dialogPanel.add(infoBg);
+
+      const infoEl = this.add.text(0, infoBgY + 15, infoTexts.join('    '), {
         fontFamily: 'Microsoft YaHei, sans-serif',
         fontSize: '13px',
         color: '#4ade80',
         align: 'center'
-      }).setOrigin(0.5));
+      }).setOrigin(0.5).setAlpha(0);
+      this.dialogPanel.add(infoEl);
+
+      this.tweens.add({
+        targets: infoEl,
+        alpha: { from: 0, to: 1 },
+        duration: 400,
+        delay: 200
+      });
     }
 
     const choices = this.ghostActor.getAvailableChoices(node);
@@ -1325,7 +1350,8 @@ export class GameScene extends Scene {
       this.dialogPanel.add(continueBtn);
     } else {
       const closeBtn = this.createDialogButton(0, ph / 2 - 50, 260, 46, '— 对话结束 —', '#555555', () => {
-        if (result.endingTriggered) {
+        const ghostState = this.ghostActor.getState();
+        if (result.endingTriggered || ghostState.endingTriggered) {
           this.time.delayedCall(400, () => {
             this.closeDialogPanel(overlay);
             this.triggerEnding();
@@ -1437,6 +1463,9 @@ export class GameScene extends Scene {
     if (this.dialogPanel) {
       this.dialogPanel.destroy();
       this.dialogPanel = null;
+    }
+    if (this.trustBar) {
+      this.trustBar.setDepth(101);
     }
     this.autoSave();
   }
