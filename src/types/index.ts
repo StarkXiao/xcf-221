@@ -66,6 +66,7 @@ export interface GameState {
   moveCount: number;
   hintUsed: number;
   archiveState: ArchiveState;
+  ghostActorState: GhostActorState;
 }
 
 export interface SaveData {
@@ -162,4 +163,66 @@ export interface ArchiveState {
   searchHistory: string[];
   unlockedSecrets: string[];
   logs: ArchiveLogEntry[];
+}
+
+export interface DialogChoice {
+  id: string;
+  text: string;
+  nextDialogId: string;
+  trustChange?: number;
+  requiredItem?: string;
+  requiresMinTrust?: number;
+  giveItem?: string;
+  takeItem?: string;
+  unlockFlag?: string;
+  requiredFlag?: string;
+  triggerEnding?: string;
+}
+
+export interface DialogNode {
+  id: string;
+  speaker: string;
+  text: string;
+  emotion?: 'neutral' | 'sad' | 'happy' | 'angry' | 'scared' | 'hopeful';
+  choices?: DialogChoice[];
+  nextDialogId?: string;
+  autoTrustChange?: number;
+  autoGiveItem?: string;
+  autoTakeItem?: string;
+  autoUnlockFlag?: string;
+  autoTriggerEnding?: string;
+  requiredFlag?: string;
+  backgroundEffect?: 'dim' | 'flash' | 'fade';
+}
+
+export interface GhostActorState {
+  trustValue: number;
+  maxTrust: number;
+  currentDialogId: string;
+  unlockedFlags: string[];
+  deliveredItems: string[];
+  receivedItems: string[];
+  dialogHistory: string[];
+  questCompleted: boolean;
+  endingTriggered: string | null;
+  encounterCount: number;
+}
+
+export interface GhostActorEndingData {
+  id: string;
+  title: string;
+  description: string;
+  isGood: boolean;
+  requiredTrust?: number;
+  requiredFlags?: string[];
+  requiredItems?: string[];
+  scoreBonus: number;
+  epilogueText: string;
+}
+
+export interface GhostActorHint {
+  id: string;
+  condition: 'low_trust' | 'high_trust' | 'has_item' | 'missing_item' | 'flag_set' | 'encounter';
+  text: string;
+  relatedId?: string;
 }

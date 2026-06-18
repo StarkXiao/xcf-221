@@ -72,6 +72,41 @@ export const ITEMS: Record<string, Item> = {
     description: '刻着剧院徽章的金色钥匙，自由的希望',
     icon: '🔐',
     canCombine: false
+  },
+  old_photo: {
+    id: 'old_photo',
+    name: '泛黄的旧照片',
+    description: '照片上是一位穿着戏服的年轻女演员，背面写着「赠我永远的夜莺」',
+    icon: '📷',
+    canCombine: false
+  },
+  costume_fragment: {
+    id: 'costume_fragment',
+    name: '戏服碎片',
+    description: '一片绣着金线的蓝色丝绸碎片，似乎来自某件华丽的戏服',
+    icon: '🧵',
+    canCombine: false
+  },
+  wilted_rose: {
+    id: 'wilted_rose',
+    name: '枯萎的白玫瑰',
+    description: '一朵干枯的白玫瑰，花瓣上还残留着淡淡的香水味',
+    icon: '🥀',
+    canCombine: false
+  },
+  nightingale_brooch: {
+    id: 'nightingale_brooch',
+    name: '夜莺胸针',
+    description: '一枚精致的银色胸针，造型是一只歌唱的夜莺，这是林婉清最珍爱的饰品',
+    icon: '🪶',
+    canCombine: false
+  },
+  unfinished_letter: {
+    id: 'unfinished_letter',
+    name: '未写完的信',
+    description: '「思远，如果你看到这封信...」——字迹到这里就断了，纸上有泪痕',
+    icon: '✉️',
+    canCombine: false
   }
 };
 
@@ -179,7 +214,7 @@ export const SCENES: Record<string, SceneConfig> = {
     name: '观众厅',
     backgroundKey: 'bg_auditorium',
     ambientColor: 0x0a1a1a,
-    description: '空荡荡的观众席，一排排座位上积满了厚厚的灰尘。舞台上的幕布破烂不堪。',
+    description: '空荡荡的观众席，一排排座位上积满了厚厚的灰尘。舞台上的幕布破烂不堪。角落里似乎有一道若隐若现的身影...',
     objects: [
       {
         id: 'seat_music_box',
@@ -192,6 +227,28 @@ export const SCENES: Record<string, SceneConfig> = {
         containsItem: 'music_box',
         collected: false,
         clueText: '座位上有一个精致的音乐盒，它似乎在等待被人聆听...'
+      },
+      {
+        id: 'ghost_actor_auditorium',
+        name: '神秘身影',
+        position: { x: 480, y: 320 },
+        size: { x: 80, y: 120 },
+        spriteKey: 'obj_ghost',
+        interactive: true,
+        type: 'clue',
+        clueText: '舞台边站着一位穿着蓝色戏服的女子，她的身影半透明，似乎在凝视着什么...'
+      },
+      {
+        id: 'wilted_rose_seat',
+        name: '楼座角落',
+        position: { x: 720, y: 200 },
+        size: { x: 60, y: 50 },
+        spriteKey: 'obj_seat_small',
+        interactive: true,
+        type: 'item',
+        containsItem: 'wilted_rose',
+        collected: false,
+        clueText: '楼座最偏僻的角落，一朵枯萎的白玫瑰静静地躺在座位上。'
       },
       {
         id: 'projection_room_door',
@@ -234,7 +291,7 @@ export const SCENES: Record<string, SceneConfig> = {
     name: '放映室',
     backgroundKey: 'bg_projection',
     ambientColor: 0x111122,
-    description: '狭小的放映室里堆满了胶片盒。那台老式放映机似乎缺少了什么零件。',
+    description: '狭小的放映室里堆满了胶片盒。那台老式放映机似乎缺少了什么零件。窗台上有什么东西在闪光。',
     objects: [
       {
         id: 'projector_machine',
@@ -259,6 +316,30 @@ export const SCENES: Record<string, SceneConfig> = {
         containsItem: 'broken_lens',
         collected: false,
         clueText: '架子上的胶片盒之间，夹着一片破碎的玻璃镜片。'
+      },
+      {
+        id: 'old_photo_window',
+        name: '窗台',
+        position: { x: 620, y: 150 },
+        size: { x: 90, y: 50 },
+        spriteKey: 'obj_windowsill',
+        interactive: true,
+        type: 'item',
+        containsItem: 'old_photo',
+        collected: false,
+        clueText: '窗台上放着一张泛黄的旧照片，照片上的女子穿着蓝色戏服...'
+      },
+      {
+        id: 'costume_hanger',
+        name: '角落衣架',
+        position: { x: 850, y: 250 },
+        size: { x: 70, y: 140 },
+        spriteKey: 'obj_hanger',
+        interactive: true,
+        type: 'item',
+        containsItem: 'costume_fragment',
+        collected: false,
+        clueText: '角落的衣架上挂着一件破烂的蓝色戏服，衣角上有金线刺绣...'
       },
       {
         id: 'stage_key_drawer',
@@ -290,7 +371,7 @@ export const SCENES: Record<string, SceneConfig> = {
     name: '后台',
     backgroundKey: 'bg_backstage',
     ambientColor: 0x221a0a,
-    description: '杂乱的后台，化妆台上的灯泡忽明忽暗。一扇通向舞台的大门矗立在眼前。',
+    description: '杂乱的后台，化妆台上的灯泡忽明忽暗。角落里有一面等身镜子，镜中似乎映着一个不属于这里的身影...',
     objects: [
       {
         id: 'vanity_table',
@@ -301,6 +382,28 @@ export const SCENES: Record<string, SceneConfig> = {
         interactive: true,
         type: 'clue',
         clueText: '镜子上用口红写着：「只有全部点亮，大门才会开启」'
+      },
+      {
+        id: 'ghost_actor_backstage',
+        name: '镜中身影',
+        position: { x: 460, y: 300 },
+        size: { x: 100, y: 160 },
+        spriteKey: 'obj_mirror_ghost',
+        interactive: true,
+        type: 'clue',
+        clueText: '镜中站着一位穿蓝色戏服的女子，她转过身来，用哀伤的眼神看着你...'
+      },
+      {
+        id: 'unfinished_letter_drawer',
+        name: '化妆台抽屉',
+        position: { x: 200, y: 420 },
+        size: { x: 80, y: 40 },
+        spriteKey: 'obj_drawer',
+        interactive: true,
+        type: 'item',
+        containsItem: 'unfinished_letter',
+        collected: false,
+        clueText: '抽屉最深处有一封被揉皱的信，上面泪痕斑驳...'
       },
       {
         id: 'spotlight_panel',
@@ -316,8 +419,8 @@ export const SCENES: Record<string, SceneConfig> = {
       {
         id: 'final_door',
         name: '剧院外门',
-        position: { x: 460, y: 350 },
-        size: { x: 100, y: 180 },
+        position: { x: 460, y: 500 },
+        size: { x: 100, y: 120 },
         spriteKey: 'obj_final_door',
         interactive: true,
         type: 'door',
@@ -375,6 +478,18 @@ export const INITIAL_GAME_STATE = {
     searchHistory: [],
     unlockedSecrets: [],
     logs: []
+  },
+  ghostActorState: {
+    trustValue: 0,
+    maxTrust: 100,
+    currentDialogId: 'ga_intro_1',
+    unlockedFlags: [],
+    deliveredItems: [],
+    receivedItems: [],
+    dialogHistory: [],
+    questCompleted: false,
+    endingTriggered: null,
+    encounterCount: 0
   }
 };
 
@@ -617,7 +732,7 @@ export const ARCHIVE_DOCUMENTS: Record<string, ArchiveDocument> = {
   }
 };
 
-import type { ArchiveState } from '@/types';
+import type { ArchiveState, DialogNode, GhostActorEndingData, GhostActorHint, GhostActorState } from '@/types';
 
 export const INITIAL_ARCHIVE_STATE: ArchiveState = {
   discoveredClues: [],
@@ -627,4 +742,435 @@ export const INITIAL_ARCHIVE_STATE: ArchiveState = {
   searchHistory: [],
   unlockedSecrets: [],
   logs: []
+};
+
+export const GHOST_ACTOR_DIALOGS: Record<string, DialogNode> = {
+  ga_intro_1: {
+    id: 'ga_intro_1',
+    speaker: '???',
+    text: '你......能看见我？',
+    emotion: 'scared',
+    choices: [
+      { id: 'c1_1', text: '你是谁？为什么在这里？', nextDialogId: 'ga_intro_2a', trustChange: 5 },
+      { id: 'c1_2', text: '（后退）你是......幽灵？', nextDialogId: 'ga_intro_2b', trustChange: -5 },
+      { id: 'c1_3', text: '（静静等待）', nextDialogId: 'ga_intro_2c', trustChange: 10 }
+    ]
+  },
+  ga_intro_2a: {
+    id: 'ga_intro_2a',
+    speaker: '林婉清',
+    text: '我叫林婉清......曾经是这家剧院的演员。我被困在这里很久很久了，久到我已经记不清过了多少年。',
+    emotion: 'sad',
+    nextDialogId: 'ga_intro_3',
+    autoTrustChange: 5,
+    autoUnlockFlag: 'met_wanqing'
+  },
+  ga_intro_2b: {
+    id: 'ga_intro_2b',
+    speaker: '林婉清',
+    text: '......是的，我是幽灵。你不用害怕，我不会伤害你。我只是......只是想离开这里。',
+    emotion: 'sad',
+    nextDialogId: 'ga_intro_3',
+    autoUnlockFlag: 'met_wanqing'
+  },
+  ga_intro_2c: {
+    id: 'ga_intro_2c',
+    speaker: '林婉清',
+    text: '......你不怕我？已经很久没有人愿意这样平静地看着我了。谢谢你。我叫林婉清，曾经是这里的女主角。',
+    emotion: 'hopeful',
+    nextDialogId: 'ga_intro_3',
+    autoTrustChange: 10,
+    autoUnlockFlag: 'met_wanqing'
+  },
+  ga_intro_3: {
+    id: 'ga_intro_3',
+    speaker: '林婉清',
+    text: '那场大火之后，我就被困在了这里。思远......他应该也在附近，但我找不到他。你能......帮帮我吗？',
+    emotion: 'hopeful',
+    choices: [
+      { id: 'c3_1', text: '我会帮你的，告诉我该怎么做。', nextDialogId: 'ga_quest_accept', trustChange: 15 },
+      { id: 'c3_2', text: '思远是谁？先告诉我发生了什么。', nextDialogId: 'ga_story_1', trustChange: 10 },
+      { id: 'c3_3', text: '我需要先探索一下，稍后再说。', nextDialogId: 'ga_quest_defer', trustChange: 0 }
+    ]
+  },
+  ga_quest_accept: {
+    id: 'ga_quest_accept',
+    speaker: '林婉清',
+    text: '真的吗？太好了！我......我有几样东西散落在剧院各处，如果能找回来，也许能召唤思远的灵魂。那些东西对我都很重要......',
+    emotion: 'happy',
+    nextDialogId: 'ga_quest_detail',
+    autoTrustChange: 10,
+    autoUnlockFlag: 'quest_started'
+  },
+  ga_story_1: {
+    id: 'ga_story_1',
+    speaker: '林婉清',
+    text: '思远是陈思远，这家剧院的创始人，也是......我最爱的人。他为了能和我永远在一起，进行了一个古老的仪式。但是仪式出了差错，大火......那场大火带走了所有人。',
+    emotion: 'sad',
+    backgroundEffect: 'dim',
+    nextDialogId: 'ga_story_2',
+    autoTrustChange: 5,
+    autoUnlockFlag: 'knows_story'
+  },
+  ga_story_2: {
+    id: 'ga_story_2',
+    speaker: '林婉清',
+    text: '我们的灵魂被困在了这里。我一直在寻找他，但始终找不到。也许......也许是因为我还没有原谅自己。',
+    emotion: 'sad',
+    choices: [
+      { id: 'c2s_1', text: '原谅自己？发生了什么？', nextDialogId: 'ga_story_3', trustChange: 10 },
+      { id: 'c2s_2', text: '我会帮你们团聚的。', nextDialogId: 'ga_quest_accept', trustChange: 15 }
+    ]
+  },
+  ga_story_3: {
+    id: 'ga_story_3',
+    speaker: '林婉清',
+    text: '仪式当晚......我其实有些害怕。我写了一封信想要阻止思远，但是......我没有勇气交给他。火燃起来的时候，我甚至在想，如果我当初把信给他，一切会不会不同......',
+    emotion: 'sad',
+    nextDialogId: 'ga_quest_accept',
+    autoTrustChange: 10,
+    autoUnlockFlag: 'knows_regret'
+  },
+  ga_quest_defer: {
+    id: 'ga_quest_defer',
+    speaker: '林婉清',
+    text: '好的......我就在这附近徘徊，你想找我的时候就来观众厅或者后台吧。我等你。',
+    emotion: 'sad'
+  },
+  ga_quest_detail: {
+    id: 'ga_quest_detail',
+    speaker: '林婉清',
+    text: '我丢失了四样东西：一张旧照片、一片戏服碎片、一朵枯萎的白玫瑰，还有......一封没有写完的信。如果你能把它们找回来交给我，我会非常感激的。',
+    emotion: 'hopeful',
+    choices: [
+      { id: 'qd_1', text: '旧照片是什么样的？', nextDialogId: 'ga_hint_photo', trustChange: 0 },
+      { id: 'qd_2', text: '我这就去找。', nextDialogId: 'ga_end_quest_info', trustChange: 5 }
+    ],
+    autoUnlockFlag: 'knows_items'
+  },
+  ga_hint_photo: {
+    id: 'ga_hint_photo',
+    speaker: '林婉清',
+    text: '那是我和思远的合影，我把它放在放映室的窗台上......因为那里是我们第一次见面的地方。你愿意帮我找回来吗？',
+    emotion: 'happy',
+    nextDialogId: 'ga_end_quest_info',
+    autoUnlockFlag: 'hint_photo'
+  },
+  ga_end_quest_info: {
+    id: 'ga_end_quest_info',
+    speaker: '林婉清',
+    text: '你随时可以来找我。如果收集到了什么，就带给我看看吧。希望......这次真的能让一切结束。',
+    emotion: 'hopeful'
+  },
+  ga_return_photo: {
+    id: 'ga_return_photo',
+    speaker: '林婉清',
+    text: '这......这是！我以为再也找不到这张照片了......谢谢你，真的谢谢你。你看，那时候的我们笑得多开心......',
+    emotion: 'happy',
+    nextDialogId: 'ga_after_item_generic',
+    autoTrustChange: 15,
+    autoTakeItem: 'old_photo',
+    autoUnlockFlag: 'delivered_photo'
+  },
+  ga_return_costume: {
+    id: 'ga_return_costume',
+    speaker: '林婉清',
+    text: '这是《永恒之夜》第三幕的戏服......我穿着它唱完了最后一句台词。金线刺绣是思远亲手缝上去的......他说我是他唯一的夜莺。',
+    emotion: 'happy',
+    nextDialogId: 'ga_after_item_generic',
+    autoTrustChange: 15,
+    autoTakeItem: 'costume_fragment',
+    autoUnlockFlag: 'delivered_costume'
+  },
+  ga_return_rose: {
+    id: 'ga_return_rose',
+    speaker: '林婉清',
+    text: '这朵玫瑰......是首演当晚思远放在我化妆台上的。他说白玫瑰代表永恒的爱。哪怕它枯萎了，我也舍不得扔掉......',
+    emotion: 'sad',
+    nextDialogId: 'ga_after_item_generic',
+    autoTrustChange: 15,
+    autoTakeItem: 'wilted_rose',
+    autoUnlockFlag: 'delivered_rose'
+  },
+  ga_return_letter: {
+    id: 'ga_return_letter',
+    speaker: '林婉清',
+    text: '这封信......我写了一半就哭到写不下去了。「思远，如果你看到这封信，可不可以不要进行那个仪式了？我只想和你平平凡凡地过一辈子......」可我最终还是没把它给他。',
+    emotion: 'sad',
+    backgroundEffect: 'dim',
+    nextDialogId: 'ga_after_letter',
+    autoTrustChange: 25,
+    autoTakeItem: 'unfinished_letter',
+    autoUnlockFlag: 'delivered_letter'
+  },
+  ga_after_item_generic: {
+    id: 'ga_after_item_generic',
+    speaker: '林婉清',
+    text: '......还有其他东西吗？如果还能找到更多，也许我就有勇气去面对他了。',
+    emotion: 'hopeful'
+  },
+  ga_after_letter: {
+    id: 'ga_after_letter',
+    speaker: '林婉清',
+    text: '这么多年了......我一直在自责。如果我把这封信给他，如果我更勇敢一些......也许我们都会有不同的结局。',
+    emotion: 'sad',
+    choices: [
+      { id: 'al_1', text: '你不需要自责，你已经尽力了。', nextDialogId: 'ga_forgive_1', trustChange: 20 },
+      { id: 'al_2', text: '现在还不晚，我们可以一起弥补。', nextDialogId: 'ga_forgive_2', trustChange: 25 }
+    ]
+  },
+  ga_forgive_1: {
+    id: 'ga_forgive_1',
+    speaker: '林婉清',
+    text: '......你说的对。也许......也许我该放下了。只是......我真的好想再见他一面，亲口告诉他我没有怪他。',
+    emotion: 'hopeful',
+    nextDialogId: 'ga_final_check',
+    autoUnlockFlag: 'wanqing_forgiven'
+  },
+  ga_forgive_2: {
+    id: 'ga_forgive_2',
+    speaker: '林婉清',
+    text: '......嗯！你说得对。谢谢你，让我重新有了勇气。现在......集齐所有东西后，我想我可以召唤思远了。',
+    emotion: 'hopeful',
+    nextDialogId: 'ga_final_check',
+    autoTrustChange: 10,
+    autoUnlockFlag: 'wanqing_forgiven'
+  },
+  ga_final_check: {
+    id: 'ga_final_check',
+    speaker: '林婉清',
+    text: '把四样东西都给我之后，我就可以进行召唤。你......你愿意陪我等到那时候吗？',
+    emotion: 'hopeful',
+    choices: [
+      { id: 'fc_1', text: '当然，我会一直陪着你。', nextDialogId: 'ga_promise', trustChange: 15 },
+      { id: 'fc_2', text: '我先去找剩下的东西。', nextDialogId: 'ga_end_quest_info', trustChange: 0 }
+    ]
+  },
+  ga_promise: {
+    id: 'ga_promise',
+    speaker: '林婉清',
+    text: '谢谢你......我好像......已经很久没有这样期待过什么了。你一定是上天派来帮助我们的人。',
+    emotion: 'happy',
+    autoUnlockFlag: 'promise_made'
+  },
+  ga_all_items_delivered: {
+    id: 'ga_all_items_delivered',
+    speaker: '林婉清',
+    text: '四样东西都齐了......还有这封信......我现在......我现在可以召唤思远了。你......你愿意见证这一切吗？',
+    emotion: 'hopeful',
+    backgroundEffect: 'fade',
+    choices: [
+      { id: 'aid_1', text: '（握住她的手）我们一起。', nextDialogId: 'ga_reunion_good', trustChange: 20, triggerEnding: 'ga_reunion_perfect', requiresMinTrust: 80 },
+      { id: 'aid_2', text: '开始吧，我看着。', nextDialogId: 'ga_reunion_good', triggerEnding: 'ga_reunion_normal' },
+      { id: 'aid_3', text: '等等......用夜莺胸针试试？', nextDialogId: 'ga_reunion_perfect', requiredItem: 'nightingale_brooch', trustChange: 10, triggerEnding: 'ga_reunion_perfect' }
+    ],
+    autoUnlockFlag: 'ritual_ready'
+  },
+  ga_reunion_good: {
+    id: 'ga_reunion_good',
+    speaker: '林婉清',
+    text: '（她将四样东西摆放在面前，轻声念起了《永恒之夜》的台词。空气中浮现出一个模糊的身影......是陈思远。）',
+    emotion: 'hopeful',
+    backgroundEffect: 'flash',
+    nextDialogId: 'ga_reunion_2'
+  },
+  ga_reunion_perfect: {
+    id: 'ga_reunion_perfect',
+    speaker: '林婉清',
+    text: '（夜莺胸针在你手中发出温柔的光芒，在空中划出银色的轨迹。四样东西悬浮起来，两道身影在光芒中逐渐清晰......）',
+    emotion: 'happy',
+    backgroundEffect: 'flash',
+    nextDialogId: 'ga_reunion_perfect_2',
+    autoGiveItem: 'nightingale_brooch'
+  },
+  ga_reunion_2: {
+    id: 'ga_reunion_2',
+    speaker: '陈思远',
+    text: '......婉清？是你吗？我找了你好久......我以为......我以为你永远不会原谅我了。',
+    emotion: 'sad',
+    nextDialogId: 'ga_reunion_3'
+  },
+  ga_reunion_perfect_2: {
+    id: 'ga_reunion_perfect_2',
+    speaker: '陈思远',
+    text: '婉清！我终于找到你了......这枚胸针......是我送给你的第一份礼物，它居然还在......还有这封信，对不起，都是我的错......',
+    emotion: 'happy',
+    nextDialogId: 'ga_reunion_3'
+  },
+  ga_reunion_3: {
+    id: 'ga_reunion_3',
+    speaker: '林婉清',
+    text: '思远......我从来没有怪过你。是我不好，如果我把信给你......我们就不会......',
+    emotion: 'sad',
+    nextDialogId: 'ga_reunion_4'
+  },
+  ga_reunion_4: {
+    id: 'ga_reunion_4',
+    speaker: '陈思远',
+    text: '不，是我的执念太深了。我想永远和你在一起，却用错了方式。现在......现在这样就很好了。至少......我们又在一起了。',
+    emotion: 'happy',
+    nextDialogId: 'ga_reunion_final'
+  },
+  ga_reunion_final: {
+    id: 'ga_reunion_final',
+    speaker: '林婉清',
+    text: '（两人相视而笑，身影逐渐变得透明。在消失之前，林婉清转向你。）谢谢你......帮我们完成了这场迟到了三十年的重逢。我们......终于可以安息了。（两道光芒飞向天空，剧院的灯光一盏接一盏地亮起。）',
+    emotion: 'happy',
+    backgroundEffect: 'flash',
+    autoUnlockFlag: 'quest_complete'
+  },
+  ga_low_trust_warning: {
+    id: 'ga_low_trust_warning',
+    speaker: '林婉清',
+    text: '你......我不太确定能不能相信你。也许......我们应该多聊聊？你知道，有些事情......不是所有人都愿意听的。',
+    emotion: 'scared'
+  },
+  ga_generic_chat: {
+    id: 'ga_generic_chat',
+    speaker: '林婉清',
+    text: '还有什么想知道的吗？关于这家剧院，关于我们，或者关于那场仪式......',
+    emotion: 'neutral',
+    choices: [
+      { id: 'gc_1', text: '告诉我更多关于《永恒之夜》的事。', nextDialogId: 'ga_talk_play', trustChange: 5 },
+      { id: 'gc_2', text: '那场大火到底是怎么回事？', nextDialogId: 'ga_talk_fire', trustChange: 10, requiredFlag: 'knows_story' },
+      { id: 'gc_3', text: '（交还找到的物品）', nextDialogId: 'ga_check_inventory', trustChange: 0 },
+      { id: 'gc_4', text: '我先去探索了，回头聊。', nextDialogId: 'ga_end_conversation', trustChange: 0 }
+    ]
+  },
+  ga_talk_play: {
+    id: 'ga_talk_play',
+    speaker: '林婉清',
+    text: '《永恒之夜》是思远为我写的。故事讲的是一位女演员为了追求永恒的艺术，与黑夜做了交易。但她不知道，永恒的代价是失去所爱的一切......第三幕那段咏叹调，是思远最喜欢的部分。',
+    emotion: 'happy',
+    nextDialogId: 'ga_generic_chat',
+    autoUnlockFlag: 'knows_play'
+  },
+  ga_talk_fire: {
+    id: 'ga_talk_fire',
+    speaker: '林婉清',
+    text: '当我念完最后一句台词，舞台中央突然燃起了蓝色的火焰。不是红色，是幽幽的蓝色......所有人都在尖叫，但我动不了。我看到思远站在火中，微笑着向我伸出手。那时候我才明白，他计划的根本不是什么「永恒」......是殉情。',
+    emotion: 'sad',
+    backgroundEffect: 'dim',
+    nextDialogId: 'ga_generic_chat',
+    autoTrustChange: 15,
+    autoUnlockFlag: 'knows_fire_truth'
+  },
+  ga_check_inventory: {
+    id: 'ga_check_inventory',
+    speaker: '林婉清',
+    text: '你找到什么了吗？让我看看......',
+    emotion: 'hopeful'
+  },
+  ga_end_conversation: {
+    id: 'ga_end_conversation',
+    speaker: '林婉清',
+    text: '好的，小心点。剧院里有些地方......不太安全。如果你看到其他奇怪的东西......就当作没看见吧。',
+    emotion: 'sad'
+  }
+};
+
+export const GHOST_ACTOR_ENDINGS: Record<string, GhostActorEndingData> = {
+  ga_reunion_perfect: {
+    id: 'ga_reunion_perfect',
+    title: '永恒之夜·完美终章',
+    description: '在夜莺胸针的指引下，两颗分离了三十年的灵魂终于找到了彼此。蓝色的火焰变成了温柔的金光，笼罩着整个剧院。',
+    isGood: true,
+    requiredTrust: 80,
+    requiredFlags: ['wanqing_forgiven', 'delivered_photo', 'delivered_costume', 'delivered_rose', 'delivered_letter'],
+    scoreBonus: 800,
+    epilogueText: `陈思远和林婉清手牵着手，在金色的光芒中渐渐远去。\n\n他们之间的误会、遗憾和痛苦，都在这一刻化作了云烟。\n\n「黑夜尽头，与君相逢。」\n\n音乐盒的旋律最后一次响起，剧院的灯光一盏接一盏地熄灭。\n\n但你知道，永夜终于过去，黎明即将到来。\n\n——《永恒之夜》完美落幕——`
+  },
+  ga_reunion_normal: {
+    id: 'ga_reunion_normal',
+    title: '永恒之夜·重逢',
+    description: '三十年的等待，终于换来了这一刻的重逢。虽然有遗憾，但两人的心已经紧紧相连。',
+    isGood: true,
+    requiredTrust: 40,
+    requiredFlags: ['delivered_photo', 'delivered_costume', 'delivered_rose', 'delivered_letter'],
+    scoreBonus: 500,
+    epilogueText: `林婉清和陈思远的身影渐渐变得透明。\n\n「对不起，让你等了这么久。」\n「没关系，至少我们最后还是在一起了。」\n\n两道光芒缠绕着飞向天空，\n剧院的灯光闪烁了几下，归于平静。\n\n你推开大门，外面的阳光有些刺眼。\n\n身后的剧院，终于不再传出哀婉的歌声。\n\n——《永恒之夜》谢幕——`
+  },
+  ga_unfinished: {
+    id: 'ga_unfinished',
+    title: '永恒之夜·未完待续',
+    description: '你离开了剧院，但林婉清的故事还没有结束。也许某天，会有人替你完成这件事......',
+    isGood: false,
+    scoreBonus: 0,
+    epilogueText: `你推开剧院的大门，阳光洒在脸上。\n\n但你知道，有什么东西被留在了那里。\n\n身后传来若有若无的歌声，\n是《永恒之夜》第三幕的咏叹调。\n\n你没有回头。\n\n只是在心里默默希望——\n某天，会有人替她完成那个未了的心愿。\n\n——《永恒之夜》未完待续——`
+  }
+};
+
+export const GHOST_ACTOR_HINTS: GhostActorHint[] = [
+  {
+    id: 'hint_meet_ghost',
+    condition: 'encounter',
+    text: '👻 观众厅的舞台边似乎站着一个身影，试着和她说话？'
+  },
+  {
+    id: 'hint_low_trust',
+    condition: 'low_trust',
+    text: '💔 林婉清对你还有戒心，试着对她更温柔一些，倾听她的故事...'
+  },
+  {
+    id: 'hint_high_trust',
+    condition: 'high_trust',
+    text: '✨ 你和林婉清的关系越来越好了！继续完成她的心愿吧。'
+  },
+  {
+    id: 'hint_find_photo',
+    condition: 'missing_item',
+    relatedId: 'old_photo',
+    text: '📷 旧照片在放映室的窗台上，那里是他们第一次见面的地方。'
+  },
+  {
+    id: 'hint_find_costume',
+    condition: 'missing_item',
+    relatedId: 'costume_fragment',
+    text: '🧵 蓝色戏服的碎片在放映室角落的衣架上。'
+  },
+  {
+    id: 'hint_find_rose',
+    condition: 'missing_item',
+    relatedId: 'wilted_rose',
+    text: '🥀 枯萎的白玫瑰在观众厅的楼座角落，她最爱那个位置。'
+  },
+  {
+    id: 'hint_find_letter',
+    condition: 'missing_item',
+    relatedId: 'unfinished_letter',
+    text: '✉️ 那封没写完的信在后台化妆台的抽屉最深处。'
+  },
+  {
+    id: 'hint_deliver_items',
+    condition: 'has_item',
+    relatedId: 'old_photo',
+    text: '🎁 你找到东西了！回到观众厅或者后台去找林婉清吧。'
+  }
+];
+
+export const GHOST_ACTOR_TRIGGER_OBJECTS: Record<string, string[]> = {
+  auditorium: ['ghost_actor_auditorium'],
+  backstage: ['ghost_actor_backstage']
+};
+
+export const TRUST_THRESHOLDS = {
+  hostile: 0,
+  wary: 15,
+  neutral: 30,
+  friendly: 50,
+  trusting: 70,
+  intimate: 90
+};
+
+export const INITIAL_GHOST_ACTOR_STATE: GhostActorState = {
+  trustValue: 0,
+  maxTrust: 100,
+  currentDialogId: 'ga_intro_1',
+  unlockedFlags: [],
+  deliveredItems: [],
+  receivedItems: [],
+  dialogHistory: [],
+  questCompleted: false,
+  endingTriggered: null,
+  encounterCount: 0
 };

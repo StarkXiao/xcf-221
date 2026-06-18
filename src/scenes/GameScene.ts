@@ -1,12 +1,13 @@
 import { Scene } from 'phaser';
-import type { GameState, SceneObject } from '@/types';
-import { GAME_WIDTH, GAME_HEIGHT, SCENES, LIGHT_PUZZLES } from '@/config/levels';
+import type { GameState, SceneObject, DialogNode } from '@/types';
+import { GAME_WIDTH, GAME_HEIGHT, SCENES, LIGHT_PUZZLES, GHOST_ACTOR_TRIGGER_OBJECTS } from '@/config/levels';
 import { InventorySystem } from '@/systems/InventorySystem';
 import { LightPuzzleSystem } from '@/systems/LightPuzzleSystem';
 import { AudioManager } from '@/systems/AudioManager';
 import { SaveSystem } from '@/systems/SaveSystem';
 import { EventBus } from '@/systems/EventBus';
 import { ArchiveSystem } from '@/systems/ArchiveSystem';
+import { GhostActorSystem, DialogResult } from '@/systems/GhostActorSystem';
 
 export class GameScene extends Scene {
   private gameState: GameState;
@@ -16,6 +17,7 @@ export class GameScene extends Scene {
   private saveSys: SaveSystem;
   private eventBus: EventBus;
   private archive: ArchiveSystem;
+  private ghostActor: GhostActorSystem;
 
   private sceneObjects: Map<string, Phaser.GameObjects.Container> = new Map();
   private sceneObjectsConfig: Map<string, SceneObject> = new Map();
@@ -27,6 +29,8 @@ export class GameScene extends Scene {
   private inventoryBar: Phaser.GameObjects.Container | null = null;
   private activePuzzlePanel: Phaser.GameObjects.Container | null = null;
   private ambientLayer: Phaser.GameObjects.Graphics | null = null;
+  private dialogPanel: Phaser.GameObjects.Container | null = null;
+  private trustBar: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super('GameScene');
@@ -36,6 +40,7 @@ export class GameScene extends Scene {
     this.saveSys = SaveSystem.getInstance();
     this.eventBus = EventBus.getInstance();
     this.archive = ArchiveSystem.getInstance();
+    this.ghostActor = GhostActorSystem.getInstance();
     this.gameState = this.saveSys.getInitialState();
   }
 
@@ -45,6 +50,7 @@ export class GameScene extends Scene {
       this.inventory.clear();
       this.lightSystem.reset();
       this.archive.reset();
+      this.ghostActor.reset();
     } else if (data.loadedState) {
       this.gameState = JSON.parse(JSON.stringify(data.loadedState));
       this.inventory.setItems(this.gameState.inventory);
@@ -57,6 +63,9 @@ export class GameScene extends Scene {
       if (this.gameState.archiveState) {
         this.archive.loadState(this.gameState.archiveState);
       }
+      if (this.gameState.ghostActorState) {
+        this.ghostActor.loadState(this.gameState.ghostActorState);
+      }
     }
   }
 
@@ -68,7 +77,9 @@ export class GameScene extends Scene {
     this.buildScene(this.gameState.currentScene);
     this.createTopBar();
     this.createInventoryBar();
+    this.createTrustBar();
     this.updateInventoryUI();
+    this.gameState.ghostActorState = this.ghostActor.getState();
     this.showMessage(SCENES[this.gameState.currentScene]?.description ?? '', 4000);
   }
 
@@ -114,6 +125,40 @@ export class GameScene extends Scene {
           });
         }
       }
+    });
+
+    this.ghostActor.onChange((event) => {
+      if (event.type === 'trust') {
+        const delta = event.delta as number;
+        if (delta !== undefined && delta !== 0) {
+          const sign = delta > 0 ? '+' : '';
+          this.time.delayedCall(300, () => {
+            this.showFloatingText(`💗 信任 ${sign}${delta}`, Phaser.Display.Color.HexStringToColor(this.ghostActor.getTrustColor()).color);
+          });
+        }
+        this.updateTrustBarUI();
+      }
+      if (event.type === 'item_deliver') {
+        const itemId = event.value as string;
+        const item = this.inventory.getItemData(itemId);
+        this.time.delayedCall(400, () => {
+          this.showFloatingText(`🎁 交付: ${item?.name ?? itemId}`, 0x4ade80);
+        });
+      }
+      if (event.type === 'item_receive') {
+        const itemId = event.value as string;
+        const item = this.inventory.getItemData(itemId);
+        this.time.delayedCall(400, () => {
+          this.showFloatingText(`✨ 获得: ${item?.name ?? itemId}`, 0xc9a44c);
+        });
+      }
+      if (event.type === 'quest_complete') {
+        this.time.delayedCall(800, () => {
+          this.audio.playSfx('success');
+          this.showFloatingText('🎉 幽灵演员支线完成！', 0x4ade80);
+        });
+      }
+      this.gameState.ghostActorState = this.ghostActor.getState();
     });
   }
 
@@ -281,9 +326,20 @@ export class GameScene extends Scene {
     });
   }
 
+  private isGhostActorObject(objId: string): boolean {
+    const sceneId = this.gameState.currentScene;
+    const triggers = GHOST_ACTOR_TRIGGER_OBJECTS[sceneId];
+    return triggers ? triggers.includes(objId) : false;
+  }
+
   private handleObjectInteraction(obj: SceneObject, container: Phaser.GameObjects.Container): void {
     this.audio.playSfx('click');
     this.gameState.moveCount++;
+
+    if (this.isGhostActorObject(obj.id)) {
+      this.handleGhostActorInteraction();
+      return;
+    }
 
     const selected = this.inventory.getSelectedItem();
 
@@ -1025,13 +1081,408 @@ export class GameScene extends Scene {
       hints.push('🤔 探索其他场景，寻找更多线索...');
     }
 
+    if (this.ghostActor.hasFlag('met_wanqing')) {
+      if (this.ghostActor.getTrustPercentage() < 30) {
+        hints.unshift('💔 林婉清对你还有戒心，和她说话时选择更温柔的选项吧');
+      }
+      const missing = this.ghostActor.getMissingItems();
+      if (missing.length > 0) {
+        const firstMissing = missing[0];
+        const itemData = this.inventory.getItemData(firstMissing);
+        hints.unshift(`🎁 还需要为林婉清寻找「${itemData?.name ?? firstMissing}」`);
+      }
+      const deliverable = this.ghostActor.getAllDeliverableItems();
+      const hasAny = deliverable.some(id => this.inventory.hasItem(id) && !this.ghostActor.hasDeliveredItem(id));
+      if (hasAny) {
+        hints.unshift('👻 你有林婉清需要的东西！去观众厅或后台找她吧');
+      }
+    } else {
+      if (this.gameState.currentScene === 'auditorium' || this.gameState.currentScene === 'backstage') {
+        hints.unshift('👻 这里似乎有奇怪的身影...试着和她接触看看？');
+      } else {
+        hints.unshift('👻 剧院里似乎有什么神秘存在...去观众厅看看？');
+      }
+    }
+
     const hint = hints[0];
     this.showClueModal(`💡 提示系统\n\n${hint}\n\n（使用提示会扣除最终分数）`);
+  }
+
+  private createTrustBar(): void {
+    if (!this.ghostActor.hasFlag('met_wanqing')) {
+      return;
+    }
+    if (this.trustBar) {
+      this.trustBar.destroy();
+    }
+
+    this.trustBar = this.add.container(GAME_WIDTH - 16, 68).setDepth(101);
+    const w = 220;
+    const h = 44;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.85);
+    bg.fillRoundedRect(-w, -h / 2, w, h, 8);
+    bg.lineStyle(1, 0xc9a44c, 0.4);
+    bg.strokeRoundedRect(-w, -h / 2, w, h, 8);
+    this.trustBar.add(bg);
+
+    const iconText = this.add.text(-w + 16, 0, '💕', {
+      fontFamily: 'Apple Color Emoji, sans-serif',
+      fontSize: '20px'
+    }).setOrigin(0, 0.5);
+    this.trustBar.add(iconText);
+
+    const labelText = this.add.text(-w + 44, -12, '林婉清', {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '12px',
+      color: '#c9a44c'
+    }).setOrigin(0, 0.5);
+    this.trustBar.add(labelText);
+
+    const barX = -w + 44;
+    const barY = 4;
+    const barW = w - 60;
+    const barH = 10;
+
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x222222, 1);
+    barBg.fillRoundedRect(barX, barY - barH / 2, barW, barH, 4);
+    this.trustBar.add(barBg);
+
+    const barFill = this.add.graphics();
+    const pct = this.ghostActor.getTrustPercentage();
+    const fillW = (barW * pct) / 100;
+    const fillColor = Phaser.Display.Color.HexStringToColor(this.ghostActor.getTrustColor()).color;
+    barFill.fillStyle(fillColor, 1);
+    barFill.fillRoundedRect(barX, barY - barH / 2, fillW, barH, 4);
+    this.trustBar.add(barFill);
+    barFill.setData('width', barW);
+    barFill.setData('fill', barFill);
+
+    const levelText = this.add.text(-16, -12, this.ghostActor.getTrustLevel(), {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '10px',
+      color: this.ghostActor.getTrustColor()
+    }).setOrigin(1, 0.5);
+    this.trustBar.add(levelText);
+
+    const pctText = this.add.text(-16, 4, `${Math.floor(pct)}%`, {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '10px',
+      color: '#888888'
+    }).setOrigin(1, 0.5);
+    this.trustBar.add(pctText);
+
+    this.trustBar.setData('barFill', barFill);
+    this.trustBar.setData('levelText', levelText);
+    this.trustBar.setData('pctText', pctText);
+  }
+
+  private updateTrustBarUI(): void {
+    if (!this.ghostActor.hasFlag('met_wanqing')) {
+      if (this.trustBar) {
+        this.trustBar.destroy();
+        this.trustBar = null;
+      }
+      return;
+    }
+    if (!this.trustBar) {
+      this.createTrustBar();
+      return;
+    }
+
+    const barFill = this.trustBar.getData('barFill') as Phaser.GameObjects.Graphics;
+    const levelText = this.trustBar.getData('levelText') as Phaser.GameObjects.Text;
+    const pctText = this.trustBar.getData('pctText') as Phaser.GameObjects.Text;
+
+    if (barFill && levelText && pctText) {
+      const barW = barFill.getData('width') as number;
+      const pct = this.ghostActor.getTrustPercentage();
+      const fillW = (barW * pct) / 100;
+      const fillColor = Phaser.Display.Color.HexStringToColor(this.ghostActor.getTrustColor()).color;
+
+      barFill.clear();
+      barFill.fillStyle(fillColor, 1);
+      barFill.fillRoundedRect(118, -1, fillW, 10, 4);
+
+      levelText.setText(this.ghostActor.getTrustLevel());
+      levelText.setColor(this.ghostActor.getTrustColor());
+      pctText.setText(`${Math.floor(pct)}%`);
+    }
+  }
+
+  private handleGhostActorInteraction(): void {
+    if (this.dialogPanel) {
+      return;
+    }
+    if (this.ghostActor.isQuestCompleted()) {
+      this.showClueModal('林婉清和陈思远已经安息了，剧院不再有哀歌...\n\n愿他们在另一个世界幸福。');
+      return;
+    }
+
+    const dialogId = this.ghostActor.getCurrentDialogWithInventoryCheck();
+    const result = this.ghostActor.advanceDialog(dialogId);
+    if (result) {
+      this.showDialogPanel(result);
+    }
+  }
+
+  private showDialogPanel(result: DialogResult): void {
+    if (this.dialogPanel) {
+      this.dialogPanel.destroy();
+    }
+
+    this.applyDialogEffect(result.effect);
+
+    const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.82)
+      .setOrigin(0, 0).setDepth(350).setInteractive();
+    this.dialogPanel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40).setDepth(351);
+
+    const pw = 780;
+    const ph = 380;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0f0a05, 0.98);
+    bg.fillRoundedRect(-pw / 2, -ph / 2, pw, ph, 16);
+    bg.lineStyle(3, 0xc9a44c, 0.7);
+    bg.strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, 16);
+    this.dialogPanel.add(bg);
+
+    const node = result.node;
+    const emotion = this.getEmotionEmoji(node.emotion ?? 'neutral');
+
+    const speakerBg = this.add.graphics();
+    speakerBg.fillStyle(0x1a1208, 1);
+    speakerBg.fillRoundedRect(-pw / 2 + 30, -ph / 2 + 24, 280, 48, 10);
+    speakerBg.lineStyle(2, 0xc9a44c, 0.5);
+    speakerBg.strokeRoundedRect(-pw / 2 + 30, -ph / 2 + 24, 280, 48, 10);
+    this.dialogPanel.add(speakerBg);
+
+    this.dialogPanel.add(this.add.text(-pw / 2 + 56, -ph / 2 + 48, `${emotion} ${node.speaker}`, {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '20px',
+      color: '#c9a44c',
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5));
+
+    const textLines = this.getWrappedLines(node.text, 26);
+    const dialogText = this.add.text(0, -40, node.text, {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '16px',
+      color: '#dddddd',
+      align: 'center',
+      wordWrap: { width: pw - 100 }
+    }).setOrigin(0.5, 0.5);
+    this.dialogPanel.add(dialogText);
+
+    const infoTexts: string[] = [];
+    if (result.trustChanged !== 0) {
+      const sign = result.trustChanged > 0 ? '+' : '';
+      infoTexts.push(`💗 信任 ${sign}${result.trustChanged}`);
+    }
+    if (result.itemsTaken.length > 0) {
+      result.itemsTaken.forEach(id => {
+        const item = this.inventory.getItemData(id);
+        infoTexts.push(`🎁 交付「${item?.name ?? id}」`);
+      });
+    }
+    if (result.itemsGiven.length > 0) {
+      result.itemsGiven.forEach(id => {
+        const item = this.inventory.getItemData(id);
+        infoTexts.push(`✨ 获得「${item?.name ?? id}」`);
+      });
+    }
+    if (result.flagsUnlocked.length > 0) {
+      infoTexts.push(`🔓 事件推进`);
+    }
+
+    if (infoTexts.length > 0) {
+      this.dialogPanel.add(this.add.text(0, 50, infoTexts.join('    '), {
+        fontFamily: 'Microsoft YaHei, sans-serif',
+        fontSize: '13px',
+        color: '#4ade80',
+        align: 'center'
+      }).setOrigin(0.5));
+    }
+
+    const choices = this.ghostActor.getAvailableChoices(node);
+    const hasNext = !!node.nextDialogId;
+    const hasChoices = choices.length > 0;
+
+    if (hasChoices) {
+      this.createDialogChoices(choices, ph);
+    } else if (hasNext) {
+      const continueBtn = this.createDialogButton(0, ph / 2 - 50, 260, 46, '继续 →', '#8b4513', () => {
+        const nextResult = this.ghostActor.advanceDialog(node.nextDialogId!);
+        if (nextResult) {
+          overlay.destroy();
+          this.showDialogPanel(nextResult);
+        } else {
+          this.closeDialogPanel(overlay);
+        }
+      });
+      this.dialogPanel.add(continueBtn);
+    } else {
+      const closeBtn = this.createDialogButton(0, ph / 2 - 50, 260, 46, '— 对话结束 —', '#555555', () => {
+        if (result.endingTriggered) {
+          this.time.delayedCall(400, () => {
+            this.closeDialogPanel(overlay);
+            this.triggerEnding();
+          });
+        } else {
+          this.closeDialogPanel(overlay);
+        }
+      });
+      this.dialogPanel.add(closeBtn);
+    }
+
+    if (result.endingTriggered) {
+      this.time.delayedCall(2000, () => {
+        const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 180, '✨ 支线结局触发 ✨', {
+          fontFamily: 'Microsoft YaHei, sans-serif',
+          fontSize: '28px',
+          color: '#ffd700',
+          fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(400).setShadow(2, 2, '#000', 4);
+        this.tweens.add({
+          targets: txt,
+          alpha: { from: 0, to: 1 },
+          scaleX: { from: 0.8, to: 1 },
+          scaleY: { from: 0.8, to: 1 },
+          duration: 800,
+          onComplete: () => {
+            this.time.delayedCall(1200, () => txt.destroy());
+          }
+        });
+      });
+    }
+  }
+
+  private createDialogChoices(choices: { choice: import('@/types').DialogChoice; available: boolean; reason?: string }[], ph: number): void {
+    const total = choices.length;
+    const btnW = 480;
+    const btnH = 48;
+    const gap = 12;
+    const startY = ph / 2 - (total * (btnH + gap)) + btnH / 2 + 20;
+
+    choices.forEach((c, i) => {
+      const y = startY + i * (btnH + gap);
+      const color = c.available ? '#3a2a10' : '#222222';
+      const btn = this.createDialogButton(0, y, btnW, btnH, c.choice.text, color, () => {
+        if (!c.available) return;
+        const result = this.ghostActor.selectChoice(c.choice);
+        if (result) {
+          const allChildren = this.children.getChildren();
+          const overlay = allChildren.find((ch: unknown) =>
+            (ch as Phaser.GameObjects.Rectangle).depth === 350
+          ) as Phaser.GameObjects.Rectangle | undefined;
+          if (overlay) overlay.destroy();
+          this.showDialogPanel(result);
+        }
+      });
+
+      if (!c.available && c.reason) {
+        btn.iterate((child: unknown) => {
+          if ((child as Phaser.GameObjects.Text).setText !== undefined) {
+            const t = child as Phaser.GameObjects.Text;
+            t.setColor('#888888');
+            t.setFontSize(14);
+            t.setText(`${c.choice.text}  （${c.reason}）`);
+          }
+        });
+      }
+      this.dialogPanel?.add(btn);
+    });
+  }
+
+  private createDialogButton(x: number, y: number, w: number, h: number, text: string, color: string, cb: () => void): Phaser.GameObjects.Container {
+    const c = this.add.container(x, y);
+    const g = this.add.graphics();
+    const col = Phaser.Display.Color.HexStringToColor(color).color;
+    g.fillStyle(col, 1);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
+    g.lineStyle(2, 0xc9a44c, 0.6);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
+    c.add(g);
+    c.add(this.add.text(0, 0, text, {
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      fontSize: '15px',
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: w - 30 }
+    }).setOrigin(0.5));
+
+    c.setSize(w, h).setInteractive({ useHandCursor: true });
+    c.on('pointerover', () => {
+      g.clear();
+      g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
+      g.fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 10);
+      g.lineStyle(2, 0xffdd44, 1);
+      g.strokeRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 10);
+    });
+    c.on('pointerout', () => {
+      g.clear();
+      g.fillStyle(col, 1);
+      g.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
+      g.lineStyle(2, 0xc9a44c, 0.6);
+      g.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
+    });
+    c.on('pointerdown', cb);
+    return c;
+  }
+
+  private closeDialogPanel(overlay: Phaser.GameObjects.Rectangle | null): void {
+    if (overlay) overlay.destroy();
+    if (this.dialogPanel) {
+      this.dialogPanel.destroy();
+      this.dialogPanel = null;
+    }
+    this.autoSave();
+  }
+
+  private applyDialogEffect(effect?: 'dim' | 'flash' | 'fade'): void {
+    if (!effect) return;
+    switch (effect) {
+      case 'dim':
+        this.cameras.main.alpha = 0.6;
+        this.time.delayedCall(600, () => { this.cameras.main.alpha = 1; });
+        break;
+      case 'flash':
+        const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0.6)
+          .setOrigin(0, 0).setDepth(349);
+        this.tweens.add({
+          targets: flash,
+          alpha: { from: 0.6, to: 0 },
+          duration: 800,
+          onComplete: () => flash.destroy()
+        });
+        break;
+      case 'fade':
+        this.cameras.main.fadeOut(300, 0, 0, 0, (_cam: Phaser.Cameras.Scene2D.Camera, prog: number) => {
+          if (prog >= 1) {
+            this.cameras.main.fadeIn(300, 0, 0, 0);
+          }
+        });
+        break;
+    }
+  }
+
+  private getEmotionEmoji(emotion: string): string {
+    switch (emotion) {
+      case 'sad': return '😢';
+      case 'happy': return '😊';
+      case 'angry': return '😠';
+      case 'scared': return '😨';
+      case 'hopeful': return '🥺';
+      default: return '👤';
+    }
   }
 
   private autoSave(): void {
     this.gameState.inventory = this.inventory.getItems();
     this.gameState.selectedItem = this.inventory.getSelectedItem();
+    this.gameState.ghostActorState = this.ghostActor.getState();
     this.saveSys.saveGame(this.gameState);
     this.eventBus.emit('save_game');
   }
@@ -1045,6 +1496,7 @@ export class GameScene extends Scene {
   private bringUIToFront(): void {
     if (this.topBar) this.topBar.setDepth(100);
     if (this.inventoryBar) this.inventoryBar.setDepth(100);
+    if (this.trustBar) this.trustBar.setDepth(101);
   }
 
   private triggerEnding(): void {

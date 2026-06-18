@@ -1,19 +1,22 @@
 import { Scene } from 'phaser';
-import type { GameState, EndingData } from '@/types';
+import type { GameState, EndingData, GhostActorEndingData } from '@/types';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/levels';
 import { EndingSystem, ScoreBreakdown } from '@/systems/EndingSystem';
 import { AudioManager } from '@/systems/AudioManager';
 import { SaveSystem } from '@/systems/SaveSystem';
 import { EventBus } from '@/systems/EventBus';
+import { GhostActorSystem } from '@/systems/GhostActorSystem';
 
 export class EndingScene extends Scene {
   private endingSystem: EndingSystem;
   private audio: AudioManager;
   private saveSys: SaveSystem;
   private eventBus: EventBus;
+  private ghostActor: GhostActorSystem;
   private gameState!: GameState;
   private ending!: EndingData;
   private score!: ScoreBreakdown;
+  private ghostEnding: GhostActorEndingData | null = null;
 
   constructor() {
     super('EndingScene');
@@ -21,12 +24,22 @@ export class EndingScene extends Scene {
     this.audio = AudioManager.getInstance();
     this.saveSys = SaveSystem.getInstance();
     this.eventBus = EventBus.getInstance();
+    this.ghostActor = GhostActorSystem.getInstance();
   }
 
   init(data: { state: GameState }): void {
     this.gameState = data.state;
+    if (data.state.ghostActorState) {
+      this.ghostActor.loadState(data.state.ghostActorState);
+    }
     this.ending = this.endingSystem.determineEnding(this.gameState);
     this.score = this.endingSystem.calculateScore(this.gameState);
+    if (this.score.ghostActorEndingId) {
+      this.ghostEnding = this.endingSystem.getGhostActorEnding(this.score.ghostActorEndingId);
+    }
+    if (!this.ghostEnding) {
+      this.ghostEnding = this.endingSystem.determineGhostActorEnding();
+    }
   }
 
   create(): void {
@@ -170,13 +183,78 @@ export class EndingScene extends Scene {
       delay: 1000,
       ease: 'Quad.easeOut'
     });
+
+    if (this.ghostEnding && (this.ghostEnding.id === 'ga_reunion_perfect' || this.ghostEnding.id === 'ga_reunion_normal')) {
+      const ghostDivider = this.add.text(cx, 370, '┈┈┈┈┈┈┈┈ 支线结局 ┈┈┈┈┈┈┈┈', {
+        fontFamily: 'Microsoft YaHei, sans-serif',
+        fontSize: '14px',
+        color: '#666666',
+        letterSpacing: 2
+      }).setOrigin(0.5).setAlpha(0);
+      this.tweens.add({
+        targets: ghostDivider,
+        alpha: 1,
+        duration: 500,
+        delay: 1600
+      });
+
+      const ghostIcon = this.ghostEnding.scoreBonus >= 800 ? '💖' : '💗';
+      const ghostIconEl = this.add.text(cx, 405, ghostIcon, {
+        fontFamily: 'Apple Color Emoji, sans-serif',
+        fontSize: '32px'
+      }).setOrigin(0.5).setAlpha(0);
+      this.tweens.add({
+        targets: ghostIconEl,
+        alpha: 1,
+        scale: { from: 0.5, to: 1 },
+        duration: 500,
+        delay: 1700,
+        ease: 'Back.easeOut'
+      });
+
+      const ghostTitleColor = this.ghostEnding.isGood ? '#ff9ec7' : '#888888';
+      const ghostTitle = this.add.text(cx, 445, this.ghostEnding.title, {
+        fontFamily: 'Georgia, serif',
+        fontSize: '28px',
+        color: ghostTitleColor,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setAlpha(0).setShadow(2, 2, '#000000', 4);
+      this.tweens.add({
+        targets: ghostTitle,
+        alpha: 1,
+        y: '-=5',
+        duration: 600,
+        delay: 1850,
+        ease: 'Quad.easeOut'
+      });
+
+      const ghostDescLines = this.ghostEnding.epilogueText.split('\n');
+      const ghostDescContainer = this.add.container(cx, 560).setAlpha(0);
+      let gdy = 0;
+      ghostDescLines.forEach((line) => {
+        ghostDescContainer.add(this.add.text(0, gdy, line, {
+          fontFamily: 'Microsoft YaHei, sans-serif',
+          fontSize: '14px',
+          color: '#bbbbbb',
+          align: 'center'
+        }).setOrigin(0.5));
+        gdy += 24;
+      });
+      this.tweens.add({
+        targets: ghostDescContainer,
+        alpha: 1,
+        duration: 800,
+        delay: 2100,
+        ease: 'Quad.easeOut'
+      });
+    }
   }
 
   private createScorePanel(): void {
     const cx = GAME_WIDTH / 2;
-    const cy = 475;
+    const cy = this.ghostEnding && (this.ghostEnding.id === 'ga_reunion_perfect' || this.ghostEnding.id === 'ga_reunion_normal') ? 740 : 475;
     const w = 560;
-    const h = 200;
+    const h = this.score.ghostActorBonus > 0 ? 220 : 200;
 
     const panel = this.add.container(cx, cy).setAlpha(0);
     this.tweens.add({
@@ -220,16 +298,24 @@ export class EndingScene extends Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5));
 
-    const items: [string, string, string][] = [
+    const baseItems: [string, string, string][] = [
       ['⏱️ 游玩时间', this.endingSystem.formatTime(this.score.playTimeSeconds), '#88cccc'],
       ['👣 移动次数', String(this.score.moveCount), '#cc88cc'],
-      ['🎒 道具收集', `${this.score.itemsCollected} / 9`, '#88cc88'],
+      ['🎒 道具收集', `${this.score.itemsCollected} / 14`, '#88cc88'],
       ['💡 谜题解开', `${this.score.puzzlesSolved} / 2`, '#ccaa66'],
       ['🎯 基础得分', String(this.score.baseScore), '#dddddd'],
       ['⚡ 速度奖励', `+${this.score.speedBonus}`, this.score.speedBonus > 0 ? '#4ade80' : '#666666'],
       ['🔧 效率奖励', `+${this.score.efficiencyBonus}`, this.score.efficiencyBonus > 0 ? '#4ade80' : '#666666'],
       ['💡 提示扣分', `-${this.score.penalty}`, this.score.penalty > 0 ? '#ff6666' : '#666666']
     ];
+
+    const ghostBonusItems: [string, string, string][] = [];
+    if (this.score.ghostActorBonus > 0) {
+      const bonusLabel = this.score.ghostActorBonus >= 800 ? '👻 幽灵支线·完美' : this.score.ghostActorBonus >= 500 ? '👻 幽灵支线·良好' : '👻 幽灵支线';
+      ghostBonusItems.push([bonusLabel, `+${this.score.ghostActorBonus}`, this.score.ghostActorBonus >= 800 ? '#ff69b4' : '#ff9ec7']);
+    }
+
+    const items = [...baseItems, ...ghostBonusItems];
 
     const cols = 2;
     const rows = Math.ceil(items.length / cols);
@@ -298,7 +384,8 @@ export class EndingScene extends Scene {
 
   private createButtons(): void {
     const cx = GAME_WIDTH / 2;
-    const by = GAME_HEIGHT - 50;
+    const hasGhostEnding = this.ghostEnding && (this.ghostEnding.id === 'ga_reunion_perfect' || this.ghostEnding.id === 'ga_reunion_normal');
+    const by = hasGhostEnding ? GAME_HEIGHT - 30 : GAME_HEIGHT - 50;
     const bw = 200;
     const bh = 48;
     const gap = 24;
