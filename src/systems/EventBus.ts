@@ -13,7 +13,16 @@ export type GameEventType =
   | 'show_message'
   | 'show_puzzle'
   | 'show_ending'
-  | 'toggle_settings';
+  | 'toggle_settings'
+  | 'archive_clue_discovered'
+  | 'archive_fragment_collected'
+  | 'archive_document_completed'
+  | 'archive_document_read'
+  | 'archive_search'
+  | 'archive_secret_unlocked'
+  | 'archive_log_added'
+  | 'archive_scene_open'
+  | 'archive_scene_close';
 
 export interface GameEvent {
   type: GameEventType;

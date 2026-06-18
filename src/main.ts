@@ -4,6 +4,7 @@ import { PreloadScene } from '@/scenes/PreloadScene';
 import { MenuScene } from '@/scenes/MenuScene';
 import { GameScene } from '@/scenes/GameScene';
 import { EndingScene } from '@/scenes/EndingScene';
+import { ArchiveScene } from '@/scenes/ArchiveScene';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/levels';
 
 const config: Types.Core.GameConfig = {
@@ -23,7 +24,8 @@ const config: Types.Core.GameConfig = {
     PreloadScene,
     MenuScene,
     GameScene,
-    EndingScene
+    EndingScene,
+    ArchiveScene
   ],
   render: {
     antialias: true,

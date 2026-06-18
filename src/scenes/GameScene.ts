@@ -6,6 +6,7 @@ import { LightPuzzleSystem } from '@/systems/LightPuzzleSystem';
 import { AudioManager } from '@/systems/AudioManager';
 import { SaveSystem } from '@/systems/SaveSystem';
 import { EventBus } from '@/systems/EventBus';
+import { ArchiveSystem } from '@/systems/ArchiveSystem';
 
 export class GameScene extends Scene {
   private gameState: GameState;
@@ -14,6 +15,7 @@ export class GameScene extends Scene {
   private audio: AudioManager;
   private saveSys: SaveSystem;
   private eventBus: EventBus;
+  private archive: ArchiveSystem;
 
   private sceneObjects: Map<string, Phaser.GameObjects.Container> = new Map();
   private sceneObjectsConfig: Map<string, SceneObject> = new Map();
@@ -33,6 +35,7 @@ export class GameScene extends Scene {
     this.audio = AudioManager.getInstance();
     this.saveSys = SaveSystem.getInstance();
     this.eventBus = EventBus.getInstance();
+    this.archive = ArchiveSystem.getInstance();
     this.gameState = this.saveSys.getInitialState();
   }
 
@@ -41,6 +44,7 @@ export class GameScene extends Scene {
       this.gameState = this.saveSys.getInitialState();
       this.inventory.clear();
       this.lightSystem.reset();
+      this.archive.reset();
     } else if (data.loadedState) {
       this.gameState = JSON.parse(JSON.stringify(data.loadedState));
       this.inventory.setItems(this.gameState.inventory);
@@ -50,6 +54,9 @@ export class GameScene extends Scene {
       this.gameState.solvedPuzzles.forEach(pid => {
         this.lightSystem.setSolved(pid, true);
       });
+      if (this.gameState.archiveState) {
+        this.archive.loadState(this.gameState.archiveState);
+      }
     }
   }
 
@@ -78,6 +85,44 @@ export class GameScene extends Scene {
       if (event.type === 'combine' && event.resultId) {
         const item = this.inventory.getItemData(event.resultId);
         this.showFloatingText(`组合成功: ${item?.name ?? ''}`, 0x4ade80);
+      }
+    });
+
+    this.archive.onChange((event) => {
+      if (event.type === 'clue' && event.id) {
+        const clue = this.archive.getClue(event.id);
+        if (clue) {
+          this.time.delayedCall(500, () => {
+            this.showFloatingText(`📜 发现线索: ${clue.title}`, 0x6a8ac9);
+          });
+        }
+      }
+      if (event.type === 'fragment' && event.id) {
+        const frag = this.archive.getFragment(event.id);
+        if (frag) {
+          this.time.delayedCall(500, () => {
+            this.showFloatingText(`🧩 收集碎片: ${frag.title}`, 0xc9a44c);
+          });
+        }
+      }
+      if (event.type === 'document' && event.id) {
+        const doc = this.archive.getDocument(event.id);
+        if (doc && doc.completed) {
+          this.time.delayedCall(500, () => {
+            this.audio.playSfx('success');
+            this.showFloatingText(`🎉 文档完成: ${doc.title}`, 0x4ade80);
+          });
+        }
+      }
+    });
+  }
+
+  private openArchive(): void {
+    this.autoSave();
+    this.eventBus.emit('archive_scene_open');
+    this.cameras.main.fadeOut(300, 0, 0, 0, (_cam: Phaser.Cameras.Scene2D.Camera, prog: number) => {
+      if (prog >= 1) {
+        this.scene.start('ArchiveScene', { returnScene: 'GameScene' });
       }
     });
   }
@@ -360,18 +405,22 @@ export class GameScene extends Scene {
         this.scene.start('MenuScene');
       });
     });
-    this.createTopBarButton(this.topBar, GAME_WIDTH - 144, 27, '🔊', '音效开关', () => {
+    this.createTopBarButton(this.topBar, GAME_WIDTH - 144, 27, '📜', '剧院档案室', () => {
+      this.audio.playSfx('click');
+      this.openArchive();
+    });
+    this.createTopBarButton(this.topBar, GAME_WIDTH - 200, 27, '🔊', '音效开关', () => {
       const newVal = !this.audio.isSfxEnabled();
       this.audio.setSfxEnabled(newVal);
       if (newVal) this.audio.playSfx('click');
       this.showMessage(newVal ? '音效已开启' : '音效已关闭', 1500);
     });
-    this.createTopBarButton(this.topBar, GAME_WIDTH - 200, 27, '🎵', '音乐开关', () => {
+    this.createTopBarButton(this.topBar, GAME_WIDTH - 256, 27, '🎵', '音乐开关', () => {
       this.audio.setBgmEnabled(!this.audio.isBgmEnabled());
       this.audio.playSfx('click');
       this.showMessage(this.audio.isBgmEnabled() ? '背景音乐已开启' : '背景音乐已关闭', 1500);
     });
-    this.createTopBarButton(this.topBar, GAME_WIDTH - 256, 27, '💡', '提示', () => {
+    this.createTopBarButton(this.topBar, GAME_WIDTH - 312, 27, '💡', '提示', () => {
       this.audio.playSfx('click');
       this.gameState.hintUsed++;
       this.showHint();

@@ -1,13 +1,17 @@
 import type { SaveData, GameState } from '@/types';
 import { GAME_VERSION, INITIAL_GAME_STATE } from '@/config/levels';
+import { ArchiveSystem } from '@/systems/ArchiveSystem';
 
 const SAVE_KEY = 'abandoned_theater_save';
 
 export class SaveSystem {
   private static instance: SaveSystem;
   private currentSave: SaveData | null = null;
+  private archive: ArchiveSystem;
 
-  private constructor() {}
+  private constructor() {
+    this.archive = ArchiveSystem.getInstance();
+  }
 
   public static getInstance(): SaveSystem {
     if (!SaveSystem.instance) {
@@ -18,6 +22,8 @@ export class SaveSystem {
 
   public saveGame(state: GameState): boolean {
     try {
+      state.archiveState = this.archive.getState();
+
       const saveData: SaveData = {
         gameState: JSON.parse(JSON.stringify(state)),
         timestamp: Date.now(),
@@ -42,6 +48,11 @@ export class SaveSystem {
         console.warn('存档版本不匹配，可能无法正常加载');
       }
       this.currentSave = saveData;
+
+      if (saveData.gameState.archiveState) {
+        this.archive.loadState(saveData.gameState.archiveState);
+      }
+
       return saveData.gameState;
     } catch (e) {
       console.error('加载游戏失败:', e);
@@ -84,6 +95,7 @@ export class SaveSystem {
   }
 
   public getInitialState(): GameState {
+    this.archive.reset();
     return {
       ...JSON.parse(JSON.stringify(INITIAL_GAME_STATE)),
       startTime: Date.now()

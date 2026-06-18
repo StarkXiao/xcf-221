@@ -65,6 +65,7 @@ export interface GameState {
   startTime: number;
   moveCount: number;
   hintUsed: number;
+  archiveState: ArchiveState;
 }
 
 export interface SaveData {
@@ -95,4 +96,70 @@ export interface AudioConfig {
     door: string;
     light: string;
   };
+}
+
+export interface Clue {
+  id: string;
+  title: string;
+  content: string;
+  category: 'person' | 'event' | 'item' | 'location' | 'secret';
+  tags: string[];
+  relatedClues: string[];
+  discovered: boolean;
+  discoveredAt?: number;
+  icon: string;
+  description: string;
+}
+
+export interface DocumentFragment {
+  id: string;
+  documentId: string;
+  title: string;
+  content: string;
+  position: number;
+  totalPieces: number;
+  collected: boolean;
+  hint: string;
+}
+
+export interface ArchiveDocument {
+  id: string;
+  title: string;
+  author: string;
+  date: string;
+  type: 'diary' | 'report' | 'letter' | 'newspaper' | 'contract' | 'script';
+  fragments: string[];
+  assembledContent: string;
+  completed: boolean;
+  unlockedAt?: number;
+  isRead: boolean;
+  summary: string;
+  reveals: string[];
+}
+
+export interface ArchiveSearchResult {
+  type: 'clue' | 'document';
+  id: string;
+  title: string;
+  excerpt: string;
+  matchScore: number;
+  matchedTags: string[];
+}
+
+export interface ArchiveLogEntry {
+  id: string;
+  timestamp: number;
+  eventType: string;
+  description: string;
+  relatedIds: string[];
+}
+
+export interface ArchiveState {
+  discoveredClues: string[];
+  collectedFragments: string[];
+  completedDocuments: string[];
+  readDocuments: string[];
+  searchHistory: string[];
+  unlockedSecrets: string[];
+  logs: ArchiveLogEntry[];
 }
